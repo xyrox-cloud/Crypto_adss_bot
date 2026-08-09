@@ -1,5 +1,5 @@
 const express = require('express');
-const { getDb, generateReferralCode } = require('../db/database');
+const { getDb, generateReferralCode, processReferralBonus, getSettings } = require('../db/database');
 const { extractTelegramUser } = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
@@ -362,7 +362,6 @@ router.post('/minigame-claim', extractTelegramUser, (req, res) => {
   try {
     const db = getDb();
     const telegramId = req.telegramUser.id;
-    const { getSettings, processReferralBonus } = require('../db/database');
 
     const user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(telegramId);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -437,7 +436,7 @@ router.post('/minigame-claim', extractTelegramUser, (req, res) => {
   }
 });
 // SCRATCH CARD CLAIM
-router.post('/scratch-claim', gameLimiter, (req, res) => {
+router.post('/scratch-claim', extractTelegramUser, (req, res) => {
   const telegramId = req.headers['x-telegram-id'];
   if (!telegramId) return res.status(401).json({ error: 'Unauthorized' });
 
