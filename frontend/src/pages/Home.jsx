@@ -4,25 +4,10 @@ import { useUser } from '../context/UserContext';
 import { useToast } from '../context/ToastContext';
 import { getAdStats } from '../api/api';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { Settings, User, Play, ChevronRight, Zap, Target, Star } from 'lucide-react';
 
 const MAX_ADS_PER_DAY = parseInt(import.meta.env.VITE_MAX_ADS_PER_DAY || '20', 10);
 
-/* helper — get initials from name */
-const getInitials = (name = '') => {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return (name.slice(0, 2) || 'U').toUpperCase();
-};
-
-/* ── Stat card component ──────────────────────── */
-const StatCard = ({ label, value, gold = false }) => (
-  <div className="stat-card">
-    <div className="stat-label">{label}</div>
-    <div className={`stat-value${gold ? ' gold' : ''}`}>{value}</div>
-  </div>
-);
-
-/* ── Main Home page ───────────────────────────── */
 const Home = () => {
   const { user, refreshUser } = useUser();
   const { showToast } = useToast();
@@ -55,7 +40,6 @@ const Home = () => {
         if (import.meta.env.DEV) {
           await new Promise(r => setTimeout(r, 1200));
           showToast('✅ Ad watched! Reward will be credited via webhook.', 'success');
-          // Wait briefly for webhook if testing locally (optional)
           await new Promise(r => setTimeout(r, 500));
           await refreshUser();
           fetchStats();
@@ -66,12 +50,8 @@ const Home = () => {
       }
 
       const adController = window.Adsgram.init({ blockId });
-      const result = await adController.show();
-
-      // We no longer call watchedAd on client; Adsgram webhook handles crediting.
+      await adController.show();
       showToast('✅ Ad watched! Reward is being credited.', 'success');
-      
-      // Optionally wait a second for server-to-server webhook to process before refreshing
       await new Promise(r => setTimeout(r, 1500));
       await refreshUser();
       fetchStats();
@@ -89,146 +69,141 @@ const Home = () => {
   };
 
   if (!user) return (
-    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '80px' }}>
-      <LoadingSpinner size={28} />
+    <div className="flex justify-center items-center h-64">
+      <LoadingSpinner size={28} color="var(--primary)" />
     </div>
   );
 
   const adsRemaining = Math.max(0, MAX_ADS_PER_DAY - stats.ads_today);
-  
   const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+  const username = tgUser?.username || user?.username || 'user';
+  const progressPercent = Math.min(100, (stats.ads_today / MAX_ADS_PER_DAY) * 100);
   
-  let tgDisplayName = 'Guest';
-  if (tgUser && tgUser.first_name) {
-    tgDisplayName = tgUser.first_name + (tgUser.last_name ? ` ${tgUser.last_name}` : '');
-  } else if (user && user.first_name) {
-    tgDisplayName = user.first_name;
-  } else if (user && user.username) {
-    tgDisplayName = user.username;
-  }
-
-  const tgUsername = tgUser?.username || user?.username || '';
-  const photoUrl = tgUser?.photo_url;
-  
-  const initials = getInitials(tgDisplayName !== 'Guest' ? tgDisplayName : (tgUsername || 'G'));
+  // Daily check-in mock data (0-6 index, current day 3 for example)
+  const days = ['M','T','W','T','F','S','S'];
+  const currentDay = new Date().getDay() - 1; // 0 for Mon
+  const normalizedDay = currentDay < 0 ? 6 : currentDay;
 
   return (
-    <div className="home-page">
-
-      {/* ── User header ─────────────────────── */}
-      <div className="user-header" style={{ alignItems: 'center' }}>
-        {photoUrl ? (
-          <img src={photoUrl} alt="Avatar" className="user-avatar" style={{ objectFit: 'cover' }} />
-        ) : (
-          <div className="user-avatar" aria-label="User avatar">{initials}</div>
-        )}
-        <div className="user-info" style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
-          <div className="user-name" style={{ fontSize: '17px', lineHeight: '1.2' }}>
-            {tgDisplayName}
-          </div>
-          {tgUsername && (
-            <div style={{ color: 'var(--text-dim)', fontSize: '13px', lineHeight: '1.2', marginBottom: '2px' }}>
-              @{tgUsername}
+    <div className="pb-24 px-4 pt-4">
+      {/* HEADER */}
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <h1 className="text-xl font-bold uppercase tracking-wider mb-2">ADSHARE</h1>
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-white/20 border border-white/10 flex items-center justify-center font-bold">
+              {user.first_name?.charAt(0) || <User size={20} />}
             </div>
-          )}
-          <div className="user-tagline" style={{ marginTop: '2px' }}>
-            {adsRemaining > 0
-              ? `${adsRemaining} ad${adsRemaining !== 1 ? 's' : ''} available today`
-              : 'Daily limit reached · Come back tomorrow'}
+            <div>
+              <div className="text-sm font-bold uppercase tracking-widest text-white/90">@{username}</div>
+              <div className="text-[10px] font-bold text-secondary flex items-center gap-1">
+                <Zap size={12} fill="currentColor" /> STREAK: 1
+              </div>
+            </div>
           </div>
         </div>
-        <div className="user-online-dot" title="Connected" />
-      </div>
-
-      {/* ── Balance card ────────────────────── */}
-      <div className="balance-card" aria-label="Balance">
-        <div className="balance-label">Available Balance</div>
-        <div style={{ marginBottom: 6 }}>
-          <span className="balance-amount">
-            {Number(user.balance || 0).toFixed(4)}
-          </span>
-          <span className="balance-currency">USDT</span>
-        </div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4, fontFamily: 'var(--font-mono)' }}>
-          Total earned: <span style={{ color: 'var(--gold-dim)' }}>${Number(stats.total_earned || 0).toFixed(4)}</span>
-        </div>
-      </div>
-
-      {/* ── Watch Ad button with card stack ─── */}
-      <div className="watch-ad-wrapper">
-        {/* Stack cards behind (decorative) */}
-        <div className="ad-stack-card" aria-hidden="true" />
-        <div className="ad-stack-card" aria-hidden="true" />
-
-        <button
-          className="watch-ad-btn"
-          onClick={handleWatchAd}
-          disabled={loadingAd || adsRemaining === 0}
-          id="watch-ad-btn"
-          aria-label={adsRemaining === 0 ? 'Daily limit reached' : 'Watch an ad and earn USDT'}
-        >
-          {loadingAd ? (
-            <><LoadingSpinner size={20} color="#fff" /> Loading Ad…</>
-          ) : adsRemaining === 0 ? (
-            <><span className="btn-icon">🔒</span> Daily Limit Reached</>
-          ) : (
-            <><span className="btn-icon">▶</span> Watch Ad &amp; Earn<span className="btn-pulse" /></>
-          )}
-        </button>
-      </div>
-
-      {/* Ads remaining hint */}
-      <p className="ads-remaining-hint">
-        {adsRemaining > 0
-          ? `${stats.ads_today} / ${MAX_ADS_PER_DAY} watched today`
-          : '🌙 Come back tomorrow for fresh ads'}
-      </p>
-
-      {/* ── 3 stat cards ────────────────────── */}
-      <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
-        <StatCard label="Ads Today"    value={stats.ads_today} />
-        <StatCard label="Total Earned" value={`$${Number(stats.total_earned || 0).toFixed(2)}`} gold />
-        <StatCard label="Referrals"    value={user.referral_count ?? 0} />
-      </div>
-
-      {/* ── Quick actions ────────────────────── */}
-      <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
-        <button
-          className="btn-secondary"
-          onClick={() => navigate('/withdraw')}
-          style={{ flex: 1, padding: '12px' }}
-          id="go-withdraw-btn"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><circle cx="12" cy="12" r="3"/></svg>
-          Withdraw
-        </button>
-        <button
-          className="btn-secondary"
-          onClick={() => navigate('/referrals')}
-          style={{ flex: 1, padding: '12px' }}
-          id="go-referrals-btn"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="3.5"/><path d="M2 20c0-3.5 3-6 7-6"/><path d="M18 14l-3 3 3 3"/><path d="M21 17h-6"/></svg>
-          Refer &amp; Earn
-        </button>
-      </div>
-
-      {/* ── How it works ─────────────────────── */}
-      <div className="how-it-works">
-        <div className="how-it-works-title">How it works</div>
-        {[
-          { n: '1', text: <>Tap <strong>Watch Ad</strong> to see a short video ad</> },
-          { n: '2', text: <><strong style={{ color: 'var(--gold)' }}>USDT lands instantly</strong> — 60% of ad revenue is yours</> },
-          { n: '3', text: <>Reach <strong>$2.00 minimum</strong>, then withdraw to your BEP20 wallet</> },
-          { n: '4', text: <>Invite friends and earn <strong>10% of their rewards</strong> forever</> },
-        ].map(({ n, text }) => (
-          <div className="how-step" key={n}>
-            <div className="how-step-num">{n}</div>
-            <div className="how-step-text">{text}</div>
+        <div className="flex items-center gap-2 mt-1">
+          <div className="bg-cardbg border border-cardborder px-3 py-2 rounded-2xl flex items-center gap-2">
+            <Star size={14} className="text-primary" fill="currentColor" />
+            <span className="font-bold text-sm">{Number(user.balance || 0).toFixed(2)}</span>
           </div>
-        ))}
+          <button onClick={() => navigate('/menu')} className="bg-cardbg border border-cardborder p-2 rounded-2xl hover:bg-white/10 transition-colors">
+            <Settings size={20} className="text-white" />
+          </button>
+        </div>
       </div>
 
+      {/* 1. BLUE EARN CARD */}
+      <div 
+        className="bg-primary rounded-3xl p-5 mb-4 relative overflow-hidden" 
+        onClick={handleWatchAd}
+        role="button"
+      >
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none"></div>
+        
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
+            <Play className="text-primary ml-1" size={20} fill="currentColor" />
+          </div>
+          <div>
+            <h2 className="text-black font-extrabold text-2xl uppercase leading-none">WATCH ADS</h2>
+            <div className="text-black/70 text-xs font-bold mt-1">EARN REAL USDT REWARDS</div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          <div className="border border-black/10 rounded-2xl p-2 text-center bg-black/5">
+            <div className="text-black font-extrabold text-xl">{stats.ads_today}</div>
+            <div className="text-black/60 text-[9px] font-bold">TODAY</div>
+          </div>
+          <div className="border border-black/10 rounded-2xl p-2 text-center bg-black/5">
+            <div className="text-black font-extrabold text-xl">{MAX_ADS_PER_DAY}</div>
+            <div className="text-black/60 text-[9px] font-bold">LIMIT</div>
+          </div>
+          <div className="border border-black/10 rounded-2xl p-2 text-center bg-black/5">
+            <div className="text-black font-extrabold text-xl">${Number(stats.total_earned || 0).toFixed(2)}</div>
+            <div className="text-black/60 text-[9px] font-bold">EARNED</div>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-end mb-2">
+          <div className="text-black text-xs font-bold">
+            {loadingAd ? 'LOADING AD...' : adsRemaining > 0 ? `${adsRemaining} ADS AVAILABLE` : 'DAILY LIMIT REACHED'}
+          </div>
+          {!loadingAd && adsRemaining > 0 && <ChevronRight size={16} className="text-black" />}
+        </div>
+        <div className="h-1.5 bg-black/20 rounded-full overflow-hidden">
+          <div className="h-full bg-black rounded-full" style={{ width: `${progressPercent}%` }}></div>
+        </div>
+      </div>
+
+      {/* 2. ORANGE GAME CARD */}
+      <div 
+        className="bg-secondary rounded-3xl p-5 mb-4 flex justify-between items-center relative overflow-hidden"
+        onClick={() => navigate('/referrals')}
+      >
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none"></div>
+        <div>
+          <div className="bg-black/20 text-black text-[10px] font-bold px-2 py-1 rounded-full inline-block mb-2">
+            MULTIPLIER
+          </div>
+          <h2 className="text-black font-extrabold text-2xl uppercase leading-none mb-1">REFERRALS</h2>
+          <div className="text-black/70 text-xs font-bold">EARN 10% FOR LIFE</div>
+        </div>
+        <div className="bg-black text-white px-5 py-3 rounded-full font-bold text-sm">
+          INVITE
+        </div>
+      </div>
+
+      {/* 3. DAILY CHECK-IN CARD */}
+      <div className="bg-cardbg border border-cardborder rounded-3xl p-5">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h3 className="font-bold text-lg">DAILY CHECK-IN</h3>
+            <div className="text-textmuted text-xs mt-1">LOG IN 7 DAYS FOR BONUS</div>
+          </div>
+          <div className="border border-success text-success px-3 py-1 rounded-full text-xs font-bold">
+            DONE
+          </div>
+        </div>
+        <div className="flex justify-between gap-1">
+          {days.map((d, i) => (
+            <div 
+              key={i} 
+              className={`flex-1 aspect-[3/4] flex flex-col items-center justify-center rounded-xl border ${
+                i === normalizedDay 
+                  ? 'bg-white border-white text-black' 
+                  : i < normalizedDay
+                    ? 'bg-success/10 border-success/30 text-success'
+                    : 'bg-transparent border-cardborder text-textmuted'
+              }`}
+            >
+              <div className="text-xs font-bold">{d}</div>
+              <div className="text-[10px] mt-1 opacity-50">{i+1}</div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };

@@ -122,4 +122,60 @@ router.get('/leaderboard', extractTelegramUser, (req, res) => {
   }
 });
 
+/* ─────────────────────────────────────────────────────────────────
+   GET /api/users/channel-status
+───────────────────────────────────────────────────────────────── */
+router.get('/channel-status', extractTelegramUser, async (req, res) => {
+  try {
+    const telegramId = req.telegramUser.id;
+    const botToken = process.env.BOT_TOKEN;
+    const channel1 = process.env.REQUIRED_CHANNEL_1;
+    const channel2 = process.env.REQUIRED_CHANNEL_2;
+    
+    if (!channel1 || !channel2) {
+      // If not configured, assume they don't need to join
+      return res.json({ required: false, isMember: true });
+    }
+
+    const checkChannel = async (channel) => {
+      const url = `https://api.telegram.org/bot${botToken}/getChatMember?chat_id=${channel}&user_id=${telegramId}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (!data.ok) {
+        // Handle failure cases (bot not admin, etc.)
+        console.error(`[Channel Status] Error checking ${channel}:`, data.description);
+        throw new Error(`Failed to check membership for ${channel}: ${data.description}`);
+      }
+
+      const status = data.result.status;
+      return ['creator', 'administrator', 'member', 'restricted'].includes(status);
+    };
+
+    let isMember1 = false;
+    let isMember2 = false;
+
+    try {
+      isMember1 = await checkChannel(channel1);
+      isMember2 = await checkChannel(channel2);
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+
+    res.json({
+      required: true,
+      isMember: isMember1 && isMember2,
+      channels: [channel1, channel2],
+      details: {
+        channel1: isMember1,
+        channel2: isMember2
+      }
+    });
+
+  } catch (err) {
+    console.error('[Channel Status]', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 module.exports = router;

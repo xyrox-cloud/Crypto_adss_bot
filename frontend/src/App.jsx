@@ -6,9 +6,10 @@ import Withdraw from './pages/Withdraw';
 import Referrals from './pages/Referrals';
 import BottomNav from './components/BottomNav';
 import LoadingSpinner from './components/LoadingSpinner';
+import ChannelGate from './components/ChannelGate';
 import { UserProvider } from './context/UserContext';
 import { ToastProvider } from './context/ToastContext';
-import { registerUser } from './api/api';
+import { registerUser, getChannelStatus } from './api/api';
 import AdminApp from './admin/AdminApp';
 import Menu from './pages/Menu';
 import About from './pages/About';
@@ -21,6 +22,7 @@ import Leaderboard from './pages/Leaderboard';
 function App() {
   const [initializing, setInitializing] = useState(true);
   const [initialUser, setInitialUser] = useState(null);
+  const [channelStatus, setChannelStatus] = useState(null);
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
@@ -51,14 +53,18 @@ function App() {
 
     const init = async () => {
       try {
-        const res = await registerUser({
-          telegram_id: tgUser.id,
-          username: tgUser.username,
-          first_name: tgUser.first_name,
-        });
-        setInitialUser(res.data);
+        const [regRes, statusRes] = await Promise.all([
+          registerUser({
+            telegram_id: tgUser.id,
+            username: tgUser.username,
+            first_name: tgUser.first_name,
+          }),
+          getChannelStatus().catch(() => ({ data: { required: false, isMember: true } }))
+        ]);
+        setInitialUser(regRes.data);
+        setChannelStatus(statusRes.data);
       } catch (err) {
-        console.error('Registration failed:', err);
+        console.error('Initialization failed:', err);
       } finally {
         setInitializing(false);
       }
@@ -68,19 +74,25 @@ function App() {
 
   if (initializing) {
     return (
-      <div className="loading-screen">
-        <div className="loading-logo">AdShare</div>
-        <div className="loading-sub">Preparing your dashboard…</div>
-        <LoadingSpinner size={26} color="var(--accent)" />
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background text-white">
+        <div className="text-3xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-br from-primary to-secondary uppercase">AdShare</div>
+        <div className="text-textmuted mb-8 text-sm font-bold uppercase tracking-wider">Preparing dashboard...</div>
+        <LoadingSpinner size={26} color="var(--primary)" />
       </div>
     );
+  }
+
+  const isAdminRoute = window.location.pathname.startsWith('/admin');
+
+  if (!isAdminRoute && channelStatus?.required && !channelStatus?.isMember) {
+    return <ChannelGate status={channelStatus} setChannelStatus={setChannelStatus} />;
   }
 
   return (
     <ToastProvider>
       <UserProvider initialUserData={initialUser}>
-        <div className="app-container">
-          <div className="page-content">
+        <div className="min-h-screen w-full max-w-xl mx-auto relative bg-background">
+          <div className="w-full h-full">
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/history" element={<History />} />
