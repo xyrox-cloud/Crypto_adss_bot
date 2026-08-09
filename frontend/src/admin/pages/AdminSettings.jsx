@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getAdminSettings, saveAdminSettings } from '../api/adminApi';
+import { getAdminSettings, saveAdminSettings } from '../../api/adminApi';
 import { useAdminToast } from '../AdminToast';
 import ConfirmModal from '../ConfirmModal';
 

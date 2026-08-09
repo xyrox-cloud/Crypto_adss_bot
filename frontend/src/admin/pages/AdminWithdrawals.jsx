@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { getAdminWithdrawals, updateWithdrawal } from '../api/adminApi';
+import { getAdminWithdrawals, updateWithdrawal } from '../../api/adminApi';
 import { useAdminToast } from '../AdminToast';
 import ConfirmModal from '../ConfirmModal';
 

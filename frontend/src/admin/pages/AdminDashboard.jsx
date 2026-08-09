@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getAdminStats } from '../api/adminApi';
+import { getAdminStats } from '../../api/adminApi';
 
 const fmt  = (n, dp = 2) => Number(n || 0).toFixed(dp);
 const fmtN = (n) => Number(n || 0).toLocaleString();

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { getActivityLog } from '../api/adminApi';
+import { getActivityLog } from '../../api/adminApi';
 import { useAdminToast } from '../AdminToast';
 
 const ACTION_COLORS = {

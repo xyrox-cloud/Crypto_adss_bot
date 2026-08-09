@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { getAdminUsers, adjustBalance, setBanStatus } from '../api/adminApi';
+import { getAdminUsers, adjustBalance, setBanStatus } from '../../api/adminApi';
 import { useAdminToast } from '../AdminToast';
 import ConfirmModal from '../ConfirmModal';
 
