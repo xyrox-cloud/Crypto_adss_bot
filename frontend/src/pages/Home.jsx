@@ -195,6 +195,36 @@ const Home = () => {
         </div>
       </div>
 
+      {/* 1.5 BLITZ MINI-GAME */}
+      <div className="bg-[#1a202c] border border-cardborder rounded-3xl p-5 mb-4 relative overflow-hidden" onClick={() => navigate('/game')}>
+        <div className="absolute top-0 right-0 w-32 h-32 bg-[#5C89C7]/10 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none"></div>
+        <div className="flex items-center gap-4 mb-3">
+          <div className="w-14 h-14 bg-[#5C89C7]/20 rounded-2xl flex items-center justify-center border border-[#5C89C7]/30 shadow-lg">
+            <Target size={28} className="text-[#C9A055]" />
+          </div>
+          <div>
+            <div className="bg-[#C9A055]/20 text-[#C9A055] text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mb-1 border border-[#C9A055]/30">
+              FREE TO PLAY
+            </div>
+            <h2 className="text-white font-extrabold text-2xl uppercase leading-none mb-1">BLITZ</h2>
+            <div className="text-[#5C89C7] text-xs font-bold uppercase tracking-wider">FIND THE ODD TILE</div>
+          </div>
+        </div>
+        <div className="bg-black/30 rounded-2xl p-3 flex justify-between items-center mb-3 border border-white/5">
+          <div>
+            <div className="text-white/60 text-[10px] font-bold uppercase">Best Score</div>
+            <div className="text-white font-bold text-sm">{topScore}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-white/60 text-[10px] font-bold uppercase">Rounds Played</div>
+            <div className="text-white font-bold text-sm">{blitzRounds}</div>
+          </div>
+        </div>
+        <button className="w-full bg-[#C9A055] text-black font-black py-3 rounded-xl flex justify-center items-center gap-2 hover:bg-[#C9A055]/90 transition-colors uppercase tracking-widest text-sm">
+          PLAY NOW <ChevronRight size={18} />
+        </button>
+      </div>
+
       {/* 2. PLAY & EARN (MINI-GAME) */}
       <div 
         className="bg-[#FF4500] rounded-3xl p-5 mb-4 flex justify-between items-center relative overflow-hidden"

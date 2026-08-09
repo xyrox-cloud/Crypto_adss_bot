@@ -100,14 +100,13 @@ const gameRewardLimiter = rateLimit({
 ───────────────────────────────────────────────────────────────── */
 router.post('/game-reward', extractTelegramUser, gameRewardLimiter, (req, res) => {
   try {
-    const { credits, score } = req.body;
-    if (credits === undefined || score === undefined) return res.status(400).json({ error: 'Missing credits or score' });
+    const { score } = req.body;
+    if (score === undefined) return res.status(400).json({ error: 'Missing score' });
 
     const parsedScore = Number(score);
-    const parsedCredits = Number(credits);
 
-    if (isNaN(parsedScore) || isNaN(parsedCredits) || parsedScore < 0 || parsedCredits < 0) {
-      console.warn(`[Anti-Cheat] Invalid payload from user ${req.telegramUser.id}: score=${score}, credits=${credits}`);
+    if (isNaN(parsedScore) || parsedScore < 0) {
+      console.warn(`[Anti-Cheat] Invalid payload from user ${req.telegramUser.id}: score=${score}`);
       return res.status(400).json({ error: 'Invalid payload' });
     }
 
@@ -116,36 +115,21 @@ router.post('/game-reward', extractTelegramUser, gameRewardLimiter, (req, res) =
       return res.status(400).json({ error: 'Score exceeds maximum possible value' });
     }
 
-    const maxCredits = (parsedScore / 10) * 2;
-    if (parsedCredits > maxCredits + 10) {
-      console.warn(`[Anti-Cheat] Credits mismatch from user ${req.telegramUser.id}: score=${parsedScore}, credits=${parsedCredits}`);
-      return res.status(400).json({ error: 'Credits mismatch detected' });
-    }
-
-    // Convert credits to a balanced USDT fraction:
-    // Best-case round: 1350 credits * 0.000005 = 0.00675 USDT (matches 1 ad watch)
-    const usdtReward = parsedCredits * 0.000005;
-
     const db = getDb();
     const user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(req.telegramUser.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     db.prepare(`
       UPDATE users 
-      SET balance = balance + ?, 
-          total_earned = total_earned + ?,
-          blitz_rounds = blitz_rounds + 1,
+      SET blitz_rounds = blitz_rounds + 1,
           top_score = CASE WHEN ? > top_score THEN ? ELSE top_score END,
           total_score_today = total_score_today + ?,
           all_time_score = all_time_score + ?,
           last_seen = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(usdtReward, usdtReward, parsedScore, parsedScore, parsedScore, parsedScore, user.id);
+    `).run(parsedScore, parsedScore, parsedScore, parsedScore, user.id);
     
-    // Record activity
-    db.prepare('INSERT INTO activity_log (action, details) VALUES (?, ?)').run('game_reward_granted', `User ${req.telegramUser.id} earned ${usdtReward} USDT from game score ${parsedScore}`);
-
-    res.json({ success: true, added: usdtReward });
+    res.json({ success: true, added: 0 });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to process game reward' });
