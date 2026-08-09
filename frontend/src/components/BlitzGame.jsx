@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 const GRID_SIZES = [2, 3, 4, 5];
 
-const BlitzGame = () => {
+const BlitzGame = ({ onExit, onRoundComplete, onWatchAd, allTimeScore = 0 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [level, setLevel] = useState(1);
@@ -11,6 +11,8 @@ const BlitzGame = () => {
   const [combo, setCombo] = useState(0);
   const [bestCombo, setBestCombo] = useState(0);
   const [timeLeft, setTimeLeft] = useState(30.0);
+  const [creditsBanked, setCreditsBanked] = useState(0);
+  const [adWatched, setAdWatched] = useState(false);
   
   const [gridSize, setGridSize] = useState(2);
   const [oddTileIndex, setOddTileIndex] = useState(0);
@@ -21,6 +23,30 @@ const BlitzGame = () => {
   const timerRef = useRef(null);
   const containerRef = useRef(null);
   const boardRef = useRef(null);
+  const scoreRef = useRef(score);
+
+  useEffect(() => {
+    scoreRef.current = score;
+  }, [score]);
+
+  const handleWatchAd = async () => {
+    if (adWatched || !onWatchAd) return;
+    const success = await onWatchAd();
+    if (success) {
+      setCreditsBanked(prev => prev * 2);
+      setAdWatched(true);
+    }
+  };
+
+  const handleExit = () => {
+    if (onRoundComplete && scoreRef.current > 0) onRoundComplete(scoreRef.current, creditsBanked);
+    if (onExit) onExit();
+  };
+
+  const handlePlayAgain = () => {
+    if (onRoundComplete && scoreRef.current > 0) onRoundComplete(scoreRef.current, creditsBanked);
+    startGame();
+  };
 
   const generateBoard = (size) => {
     const totalTiles = size * size;
@@ -37,6 +63,8 @@ const BlitzGame = () => {
     setBestCombo(0);
     setTimeLeft(30.0);
     setGridSize(2);
+    setCreditsBanked(0);
+    setAdWatched(false);
     generateBoard(2);
     setFloatingTexts([]);
   };
@@ -49,6 +77,7 @@ const BlitzGame = () => {
             clearInterval(timerRef.current);
             setGameOver(true);
             setIsPlaying(false);
+            setCreditsBanked(Math.floor(scoreRef.current / 10));
             return 0;
           }
           return prev - 0.1;
@@ -72,9 +101,9 @@ const BlitzGame = () => {
     }
 
     setCombo(0);
-    setTimeLeft(prev => Math.max(0, prev - 1));
+    setTimeLeft(prev => Math.max(0, prev - 5));
     const id = floatingTextId.current++;
-    setFloatingTexts(prev => [...prev, { id, text: "-1.0s", x, y, isPenalty: true }]);
+    setFloatingTexts(prev => [...prev, { id, text: "-5.0s", x, y, isPenalty: true }]);
     setTimeout(() => {
       setFloatingTexts(prev => prev.filter(ft => ft.id !== id));
     }, 800);
@@ -93,7 +122,8 @@ const BlitzGame = () => {
         y = e.clientY - rect.top;
       }
 
-      setScore(prev => prev + 10 + combo * 2);
+      const pointsEarned = 5 + Math.floor(combo / 2) * 5;
+      setScore(prev => Math.min(prev + pointsEarned, 1000));
       setHits(prev => {
         const newHits = prev + 1;
         const newLevel = Math.min(4, Math.floor(newHits / 4) + 1);
@@ -186,13 +216,44 @@ const BlitzGame = () => {
          
          {gameOver && (
            <div 
-             className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-black/80 backdrop-blur-md p-6 text-center"
+             className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-[#0a0a0a]/95 backdrop-blur-md p-6 text-center"
              onPointerDown={e => e.stopPropagation()}
            >
-             <h2 className="text-4xl font-black mb-1 text-white tracking-tight">TIME UP</h2>
-             <p className="text-gray-400 mb-8 font-medium">Final Score: <span className="text-[#FFC730] font-bold text-2xl">{score}</span></p>
-             <button onClick={startGame} className="bg-[#FF4500] text-white font-black py-4 px-10 text-xl hover:bg-[#ff5722] transition-colors active:scale-95 uppercase tracking-widest w-full">
+             <h2 className="text-3xl font-black mb-1 text-white tracking-tight uppercase">Round Complete</h2>
+             <p className="text-gray-400 mb-6 font-medium">Final Score: <span className="text-[#FFC730] font-bold text-2xl">{score}</span></p>
+             
+             <div className="bg-[#111] border border-[#222] rounded-2xl w-full p-4 mb-6">
+                <div className="text-2xl font-black text-[#4ade80] mb-1">+{creditsBanked} BANKED</div>
+                <div className="grid grid-cols-3 gap-2 mt-4 text-xs font-bold text-gray-500 uppercase">
+                   <div className="flex flex-col items-center">
+                     <span>Hits</span>
+                     <span className="text-white text-lg mt-1">{hits}</span>
+                   </div>
+                   <div className="flex flex-col items-center">
+                     <span>Best Combo</span>
+                     <span className="text-white text-lg mt-1">{bestCombo}×</span>
+                   </div>
+                   <div className="flex flex-col items-center">
+                     <span>All-Time</span>
+                     <span className="text-white text-lg mt-1">{allTimeScore + score}</span>
+                   </div>
+                </div>
+             </div>
+
+             <button 
+               onClick={handleWatchAd}
+               disabled={adWatched}
+               className={`w-full py-4 px-6 rounded-xl font-black uppercase tracking-wider mb-3 transition-colors ${adWatched ? 'bg-[#222] text-gray-500' : 'bg-[#4ade80] text-black hover:bg-[#3bcf6b] active:scale-95'}`}
+             >
+               {adWatched ? 'Reward Claimed' : 'Double This Round\'s Credits'}
+             </button>
+
+             <button onClick={handlePlayAgain} className="bg-[#FF4500] text-white font-black py-4 px-10 text-xl hover:bg-[#ff5722] rounded-xl transition-colors active:scale-95 uppercase tracking-widest w-full mb-3">
                Play Again
+             </button>
+             
+             <button onClick={handleExit} className="text-gray-400 font-bold uppercase tracking-widest text-sm py-2 active:scale-95">
+               Back to Home
              </button>
            </div>
          )}

@@ -189,6 +189,44 @@ router.get('/leaderboard', extractTelegramUser, (req, res) => {
 });
 
 /* ─────────────────────────────────────────────────────────────────
+   GET /api/users/avatar/:telegramId
+───────────────────────────────────────────────────────────────── */
+router.get('/avatar/:telegramId', async (req, res) => {
+  try {
+    const { telegramId } = req.params;
+    const botToken = process.env.BOT_TOKEN;
+    if (!botToken) return res.status(404).send('No bot token');
+
+    const photosRes = await fetch(`https://api.telegram.org/bot${botToken}/getUserProfilePhotos?user_id=${telegramId}&limit=1`);
+    const photosData = await photosRes.json();
+    
+    if (!photosData.ok || photosData.result.total_count === 0) {
+      return res.status(404).send('No photo');
+    }
+
+    const fileId = photosData.result.photos[0][0].file_id;
+    const fileRes = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`);
+    const fileData = await fileRes.json();
+    
+    if (!fileData.ok) {
+      return res.status(404).send('Cannot get file path');
+    }
+
+    const filePath = fileData.result.file_path;
+    const imageRes = await fetch(`https://api.telegram.org/file/bot${botToken}/${filePath}`);
+    
+    res.set('Content-Type', imageRes.headers.get('content-type'));
+    res.set('Cache-Control', 'public, max-age=86400');
+    
+    const buffer = await imageRes.arrayBuffer();
+    res.send(Buffer.from(buffer));
+  } catch (err) {
+    console.error('[Avatar Proxy Error]', err);
+    res.status(500).send('Server Error');
+  }
+});
+
+/* ─────────────────────────────────────────────────────────────────
    GET /api/users/channel-status
 ───────────────────────────────────────────────────────────────── */
 router.get('/channel-status', extractTelegramUser, async (req, res) => {

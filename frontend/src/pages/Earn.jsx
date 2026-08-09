@@ -14,7 +14,7 @@ const Earn = () => {
   const { user, refreshUser } = useUser();
   const { showToast } = useToast();
   
-  const ENABLE_REFERRALS = false;
+  const ENABLE_REFERRALS = true;
   
   // Watch Ads state
   const [loadingAd, setLoadingAd] = useState(false);

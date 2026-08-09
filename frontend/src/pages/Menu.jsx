@@ -11,7 +11,7 @@ const Menu = () => {
     String(tgUser?.id) === import.meta.env.VITE_SUPER_ADMIN_ID || 
     String(user?.telegram_id) === import.meta.env.VITE_SUPER_ADMIN_ID;
 
-  const ENABLE_REFERRALS = false;
+  const ENABLE_REFERRALS = true;
 
   return (
     <div className="pb-24">

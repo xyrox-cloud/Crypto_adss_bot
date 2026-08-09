@@ -4,6 +4,32 @@ import { useUser } from '../context/UserContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Trophy, User, Medal } from 'lucide-react';
 
+const Avatar = ({ user, size = 10, isMyRank = false }) => {
+  const [error, setError] = useState(false);
+  const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
+  const tgId = user?.telegram_id || user?.id; // backend might send telegram_id
+  const avatarUrl = tgId ? `${baseURL}/users/avatar/${tgId}` : null;
+  
+  // Use public URL for my own photo if available via Telegram WebApp
+  const myPhotoUrl = isMyRank && window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url;
+  const src = myPhotoUrl || avatarUrl;
+
+  const initials = (user?.first_name || user?.username || 'A').charAt(0).toUpperCase();
+
+  if (!src || error) {
+    return <>{initials}</>;
+  }
+
+  return (
+    <img 
+      src={src} 
+      alt="Profile" 
+      className="w-full h-full object-cover" 
+      onError={() => setError(true)}
+    />
+  );
+};
+
 const Leaderboard = () => {
   const { user } = useUser();
   const [time, setTime] = useState('all_time');
@@ -58,11 +84,7 @@ const Leaderboard = () => {
       <div className="bg-secondary rounded-3xl p-4 flex items-center justify-between mb-6 shadow-[0_0_15px_rgba(255,90,31,0.2)]">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center font-bold text-lg text-white border-2 border-white/40 overflow-hidden">
-            {window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url ? (
-              <img src={window.Telegram.WebApp.initDataUnsafe.user.photo_url} alt="Profile" className="w-full h-full object-cover" />
-            ) : (
-              user?.first_name?.charAt(0) || <User size={20} />
-            )}
+            <Avatar user={user} size={12} isMyRank={true} />
           </div>
           <div>
             <div className="text-[10px] font-bold text-black/60 bg-black/10 px-2 py-0.5 rounded-full inline-block mb-1">
@@ -93,11 +115,7 @@ const Leaderboard = () => {
                  `#${idx + 1}`}
               </div>
               <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center font-bold text-white mr-3 flex-shrink-0 overflow-hidden">
-                {l.photo_url ? (
-                  <img src={l.photo_url} alt={l.first_name || l.username} className="w-full h-full object-cover" />
-                ) : (
-                  (l.first_name || l.username || 'A').charAt(0).toUpperCase()
-                )}
+                <Avatar user={l} size={10} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-bold text-white uppercase truncate">{l.first_name || l.username || 'Anonymous'}</div>
