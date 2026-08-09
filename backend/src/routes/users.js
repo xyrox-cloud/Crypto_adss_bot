@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDb, generateReferralCode } = require('../db/database');
 const { extractTelegramUser } = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
 
 router.post('/register', (req, res) => {
@@ -80,13 +81,44 @@ router.get('/referrals', extractTelegramUser, (req, res) => {
   }
 });
 
+const gameRewardLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 5, // Max 5 round submissions per minute (allows for early quits/restarts)
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many game rewards submitted. Please wait.' }
+});
+
 /* ─────────────────────────────────────────────────────────────────
    POST /api/users/game-reward
 ───────────────────────────────────────────────────────────────── */
-router.post('/game-reward', extractTelegramUser, (req, res) => {
+router.post('/game-reward', extractTelegramUser, gameRewardLimiter, (req, res) => {
   try {
     const { credits, score } = req.body;
     if (credits === undefined || score === undefined) return res.status(400).json({ error: 'Missing credits or score' });
+
+    const parsedScore = Number(score);
+    const parsedCredits = Number(credits);
+
+    if (isNaN(parsedScore) || isNaN(parsedCredits) || parsedScore < 0 || parsedCredits < 0) {
+      console.warn(`[Anti-Cheat] Invalid payload from user ${req.telegramUser.id}: score=${score}, credits=${credits}`);
+      return res.status(400).json({ error: 'Invalid payload' });
+    }
+
+    if (parsedScore > 50000) {
+      console.warn(`[Anti-Cheat] Impossible score from user ${req.telegramUser.id}: ${parsedScore}`);
+      return res.status(400).json({ error: 'Score exceeds maximum possible value' });
+    }
+
+    const maxCredits = (parsedScore / 10) * 2;
+    if (parsedCredits > maxCredits + 10) {
+      console.warn(`[Anti-Cheat] Credits mismatch from user ${req.telegramUser.id}: score=${parsedScore}, credits=${parsedCredits}`);
+      return res.status(400).json({ error: 'Credits mismatch detected' });
+    }
+
+    // Convert credits to a balanced USDT fraction:
+    // Best-case round: 1350 credits * 0.000005 = 0.00675 USDT (matches 1 ad watch)
+    const usdtReward = parsedCredits * 0.000005;
 
     const db = getDb();
     const user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(req.telegramUser.id);
@@ -102,12 +134,12 @@ router.post('/game-reward', extractTelegramUser, (req, res) => {
           all_time_score = all_time_score + ?,
           last_seen = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(credits, credits, score, score, score, score, user.id);
+    `).run(usdtReward, usdtReward, parsedScore, parsedScore, parsedScore, parsedScore, user.id);
     
     // Record activity
-    db.prepare('INSERT INTO activity_log (action, details) VALUES (?, ?)').run('game_reward_granted', `User ${req.telegramUser.id} earned ${credits} USDT from game score ${score}`);
+    db.prepare('INSERT INTO activity_log (action, details) VALUES (?, ?)').run('game_reward_granted', `User ${req.telegramUser.id} earned ${usdtReward} USDT from game score ${parsedScore}`);
 
-    res.json({ success: true, added: credits });
+    res.json({ success: true, added: usdtReward });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to process game reward' });
