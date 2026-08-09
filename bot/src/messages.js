@@ -1,5 +1,5 @@
 module.exports = {
-  welcome: (firstName) => `Hello, ${firstName}! 👋\n\nWelcome to AdShare Bot. Here you can complete daily tasks and earn real USDT seamlessly.\nClick below to open the Mini App and start earning!`,
+  welcome: (firstName) => `Hello, ${firstName}! 👋\n\nWelcome to AdShare — Tasks & Rewards. Here you can complete daily tasks and earn real USDT seamlessly.\nClick below to open the Mini App and start earning!`,
   
   balance: (balance) => `💰 Your current balance is: *${balance.toFixed(2)} USDT*`,
   

@@ -8,7 +8,7 @@ const About = () => {
       {/* HEADER / BANNER */}
       <div className="bg-secondary px-6 py-6 rounded-none text-black relative mb-6">
         <button onClick={() => navigate('/menu')} className="text-black/70 hover:text-black font-bold text-sm mb-4">← Back</button>
-        <h1 className="text-3xl font-extrabold uppercase leading-none">AdShare</h1>
+        <h1 className="text-3xl font-extrabold uppercase leading-none">AdShare — Tasks & Rewards</h1>
         <p className="text-black/70 font-mono text-sm mt-1">Version 1.0.0</p>
         <p className="mt-4 font-bold">"Complete daily tasks and earn real USDT on Telegram"</p>
       </div>

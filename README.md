@@ -1,4 +1,4 @@
-# 🚀 TG AdShare — Telegram Ad Revenue Mini App
+# 🚀 AdShare — Tasks & Rewards
 
 A full-stack Telegram Mini App where users watch rewarded ads and earn USDT, with 60/40 revenue sharing between users and the platform.
 
