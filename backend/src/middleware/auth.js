@@ -69,7 +69,7 @@ function verifyTelegramInitData(initData, botToken) {
     // Optionally validate freshness (5 min window)
     const authDate = parseInt(params.get('auth_date') || '0', 10);
     const now = Math.floor(Date.now() / 1000);
-    if (now - authDate > 300) return null; // 5 minutes
+    if (now - authDate > 86400) return null; // 24 hours
 
     // Parse the user object
     const userStr = params.get('user');

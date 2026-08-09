@@ -63,17 +63,17 @@ const Menu = () => {
 
       {/* STATS BOXES */}
       <div className="px-4 mt-4">
-        <div className="bg-cardbg border border-cardborder rounded-3xl p-3 grid grid-cols-3 gap-2 text-center divide-x divide-cardborder">
-          <div>
-            <div className="text-lg font-bold text-white">${user?.balance || '0.00'}</div>
+        <div className="bg-cardbg border border-cardborder rounded-3xl p-3 grid grid-cols-3 gap-0 text-center divide-x divide-cardborder">
+          <div className="min-w-0 overflow-hidden px-1">
+            <div className="text-sm font-bold text-white truncate">${Number(user?.balance || 0).toFixed(4)}</div>
             <div className="text-[10px] text-textmuted mt-0.5">BALANCE</div>
           </div>
-          <div>
-            <div className="text-lg font-bold text-white">${user?.total_earned || '0.00'}</div>
+          <div className="min-w-0 overflow-hidden px-1">
+            <div className="text-sm font-bold text-white truncate">${Number(user?.total_earned || 0).toFixed(4)}</div>
             <div className="text-[10px] text-textmuted mt-0.5">EARNED</div>
           </div>
-          <div>
-            <div className="text-lg font-bold text-white">0</div>
+          <div className="min-w-0 overflow-hidden px-1">
+            <div className="text-sm font-bold text-white truncate">{user?.referral_count || 0}</div>
             <div className="text-[10px] text-textmuted mt-0.5">REFS</div>
           </div>
         </div>

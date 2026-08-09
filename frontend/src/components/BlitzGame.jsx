@@ -129,6 +129,7 @@ const BlitzGame = ({ onExit, onRoundComplete, allTimeScore = 0 }) => {
     const y = rect.top;
 
     setCombo(0);
+    setScore(prev => Math.max(0, prev - POINTS_PER_HIT));
     setGridSize(prev => {
       const newSize = Math.max(2, prev - 1);
       gridSizeRef.current = newSize;
@@ -143,7 +144,7 @@ const BlitzGame = ({ onExit, onRoundComplete, allTimeScore = 0 }) => {
       }
       return next;
     });
-    spawnFloat(`-${TIME_PENALTY_MISS}s`, x, y, false);
+    spawnFloat(`-10 / -${TIME_PENALTY_MISS}s`, x, y, false);
   };
 
   const handleTilePointerDown = (e, tileIndex) => {
