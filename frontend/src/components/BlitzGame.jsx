@@ -19,6 +19,7 @@ const BlitzGame = () => {
   const floatingTextId = useRef(0);
   
   const timerRef = useRef(null);
+  const containerRef = useRef(null);
   const boardRef = useRef(null);
 
   const generateBoard = (size) => {
@@ -59,23 +60,42 @@ const BlitzGame = () => {
     return () => clearInterval(timerRef.current);
   }, [isPlaying, timeLeft]);
 
+  const handleMissClick = (e) => {
+    if (!isPlaying || gameOver) return;
+    
+    let x = e.clientX;
+    let y = e.clientY;
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      x = e.clientX - rect.left;
+      y = e.clientY - rect.top;
+    }
+
+    setCombo(0);
+    setTimeLeft(prev => Math.max(0, prev - 1));
+    const id = floatingTextId.current++;
+    setFloatingTexts(prev => [...prev, { id, text: "-1.0s", x, y, isPenalty: true }]);
+    setTimeout(() => {
+      setFloatingTexts(prev => prev.filter(ft => ft.id !== id));
+    }, 800);
+  };
+
   const handleTileClick = (index, e) => {
+    e.stopPropagation();
     if (!isPlaying || gameOver) return;
 
     if (index === oddTileIndex) {
-      // Correct tap
-      let x = 50;
-      let y = 50;
-      if (boardRef.current) {
-        const boardRect = boardRef.current.getBoundingClientRect();
-        x = e.clientX - boardRect.left;
-        y = e.clientY - boardRect.top;
+      let x = e.clientX;
+      let y = e.clientY;
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        x = e.clientX - rect.left;
+        y = e.clientY - rect.top;
       }
 
       setScore(prev => prev + 10 + combo * 2);
       setHits(prev => {
         const newHits = prev + 1;
-        // Level up roughly every 4 hits
         const newLevel = Math.min(4, Math.floor(newHits / 4) + 1);
         setLevel(newLevel);
         const newSize = GRID_SIZES[newLevel - 1];
@@ -93,14 +113,13 @@ const BlitzGame = () => {
       setTimeLeft(prev => prev + 0.35);
       
       const id = floatingTextId.current++;
-      setFloatingTexts(prev => [...prev, { id, text: "+0.35s", x, y }]);
+      setFloatingTexts(prev => [...prev, { id, text: "+0.35s", x, y, isPenalty: false }]);
       setTimeout(() => {
         setFloatingTexts(prev => prev.filter(ft => ft.id !== id));
       }, 800);
       
     } else {
-      // Wrong tap
-      setCombo(0);
+      handleMissClick(e);
     }
   };
 
@@ -147,9 +166,16 @@ const BlitzGame = () => {
        </div>
 
        {/* Game Board Container */}
-       <div className="flex-1 flex items-center justify-center w-full aspect-square relative bg-[#0a0a0a]">
+       <div 
+         ref={containerRef}
+         className="flex-1 flex items-center justify-center w-full relative bg-[#0a0a0a]"
+         onPointerDown={handleMissClick}
+       >
          {!isPlaying && !gameOver && (
-           <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-black/60 backdrop-blur-sm p-6 text-center">
+           <div 
+             className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-black/60 backdrop-blur-sm p-6 text-center"
+             onPointerDown={e => e.stopPropagation()}
+           >
              <h2 className="text-3xl font-black mb-2 tracking-tight text-[#FF4500] uppercase">Blitz</h2>
              <p className="text-gray-400 mb-8 font-medium">Find the odd tile before time runs out!</p>
              <button onClick={startGame} className="bg-[#FF4500] text-white font-black py-4 px-10 text-xl hover:bg-[#ff5722] transition-colors active:scale-95 uppercase tracking-widest w-full">
@@ -159,7 +185,10 @@ const BlitzGame = () => {
          )}
          
          {gameOver && (
-           <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-black/80 backdrop-blur-md p-6 text-center">
+           <div 
+             className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-black/80 backdrop-blur-md p-6 text-center"
+             onPointerDown={e => e.stopPropagation()}
+           >
              <h2 className="text-4xl font-black mb-1 text-white tracking-tight">TIME UP</h2>
              <p className="text-gray-400 mb-8 font-medium">Final Score: <span className="text-[#FFC730] font-bold text-2xl">{score}</span></p>
              <button onClick={startGame} className="bg-[#FF4500] text-white font-black py-4 px-10 text-xl hover:bg-[#ff5722] transition-colors active:scale-95 uppercase tracking-widest w-full">
@@ -170,7 +199,7 @@ const BlitzGame = () => {
 
          <div 
            ref={boardRef}
-           className="w-full h-full grid gap-1.5 relative overflow-hidden"
+           className="w-full max-w-[400px] aspect-square grid gap-1.5 relative"
            style={{ 
              gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
              gridTemplateRows: `repeat(${gridSize}, minmax(0, 1fr))`
@@ -186,18 +215,18 @@ const BlitzGame = () => {
                }}
              />
            ))}
-           
-           {/* Floating texts */}
-           {floatingTexts.map(ft => (
-             <div 
-               key={ft.id}
-               className="absolute text-[#4ade80] font-black font-mono text-lg pointer-events-none animate-float-up z-10 drop-shadow-md"
-               style={{ left: ft.x, top: ft.y }}
-             >
-               {ft.text}
-             </div>
-           ))}
          </div>
+
+         {/* Floating texts */}
+         {floatingTexts.map(ft => (
+           <div 
+             key={ft.id}
+             className={`absolute font-black font-mono text-lg pointer-events-none animate-float-up z-30 drop-shadow-md ${ft.isPenalty ? 'text-red-500' : 'text-[#4ade80]'}`}
+             style={{ left: ft.x, top: ft.y }}
+           >
+             {ft.text}
+           </div>
+         ))}
        </div>
 
        {/* Bottom Stats */}
