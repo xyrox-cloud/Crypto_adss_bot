@@ -10,7 +10,7 @@ const BlitzGame = () => {
   const [hits, setHits] = useState(0);
   const [combo, setCombo] = useState(0);
   const [bestCombo, setBestCombo] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(45.0);
+  const [timeLeft, setTimeLeft] = useState(30.0);
   
   const [gridSize, setGridSize] = useState(2);
   const [oddTileIndex, setOddTileIndex] = useState(0);
@@ -35,7 +35,7 @@ const BlitzGame = () => {
     setHits(0);
     setCombo(0);
     setBestCombo(0);
-    setTimeLeft(45.0);
+    setTimeLeft(30.0);
     setGridSize(2);
     generateBoard(2);
     setFloatingTexts([]);
@@ -123,7 +123,7 @@ const BlitzGame = () => {
     }
   };
 
-  const progressPercent = Math.min(100, Math.max(0, (timeLeft / 45) * 100));
+  const progressPercent = Math.min(100, Math.max(0, (timeLeft / 30) * 100));
 
   return (
     <div className="w-full max-w-md mx-auto bg-[#050505] min-h-[500px] flex flex-col p-4 font-sans text-white select-none">
