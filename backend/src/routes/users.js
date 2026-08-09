@@ -21,7 +21,13 @@ router.post('/register', (req, res) => {
       // Handle referral logic
       let validReferral = null;
       if (referral_code) {
-        const referrer = db.prepare('SELECT telegram_id FROM users WHERE referral_code = ?').get(referral_code);
+        let referrer;
+        if (referral_code.startsWith('ref_')) {
+          const refTgId = referral_code.slice(4);
+          referrer = db.prepare('SELECT telegram_id FROM users WHERE telegram_id = ?').get(refTgId);
+        } else {
+          referrer = db.prepare('SELECT telegram_id FROM users WHERE referral_code = ?').get(referral_code);
+        }
         if (referrer && referrer.telegram_id !== telegram_id) {
           validReferral = referrer.telegram_id;
         }

@@ -11,7 +11,7 @@ const Referrals = () => {
   const [loading, setLoading]     = useState(true);
 
   const botUsername = import.meta.env.VITE_BOT_USERNAME || 'AdShare_Bot';
-  const refLink     = `https://t.me/${botUsername}?start=${user?.referral_code}`;
+  const refLink     = `https://t.me/${botUsername}?start=ref_${user?.telegram_id || user?.id}`;
 
   useEffect(() => {
     const fetchRefs = async () => {
