@@ -7,6 +7,53 @@ const { requireAdmin } = require('../middleware/auth');
 const router = express.Router();
 
 /* ─────────────────────────────────────────────────────────────────
+   Payout Announcement Helper
+───────────────────────────────────────────────────────────────── */
+function generatePayoutMessage(amount, userIdentifier, walletAddress, txHash = null) {
+  const displayWallet = walletAddress.length > 10 
+    ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` 
+    : walletAddress;
+  
+  let msg = `✅ <b>PAYOUT SUCCESSFUL</b>\n\n`;
+  msg += `💰 <b>Amount:</b> ${parseFloat(amount).toFixed(2)} USDT\n`;
+  msg += `👤 <b>User:</b> ${userIdentifier}\n`;
+  msg += `🌐 <b>Network:</b> BEP20\n`;
+  msg += `📮 <b>To:</b> <code>${displayWallet}</code>\n`;
+  
+  if (txHash) {
+    msg += `🔍 <b>Tx:</b> <a href="https://bscscan.com/tx/${txHash}">${txHash}</a>`;
+  }
+  
+  return msg;
+}
+
+function sendPayoutAnnouncement(amount, userIdentifier, walletAddress, txHash) {
+  if (process.env.ENABLE_PAYOUT_ANNOUNCEMENTS !== 'true' || !process.env.PAYOUT_CHANNEL_ID || !process.env.BOT_TOKEN) {
+    return;
+  }
+  
+  const message = generatePayoutMessage(amount, userIdentifier, walletAddress, txHash);
+  
+  fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: process.env.PAYOUT_CHANNEL_ID,
+      text: message,
+      parse_mode: 'HTML',
+      disable_web_page_preview: true
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (!data.ok) {
+      console.error('[PAYOUT ANNOUNCEMENT FAILED]', data);
+    }
+  })
+  .catch(err => console.error('[PAYOUT ANNOUNCEMENT ERROR]', err));
+}
+
+/* ─────────────────────────────────────────────────────────────────
    Helper: log an admin action to the activity_log table
 ───────────────────────────────────────────────────────────────── */
 function logAction(db, action, details) {
@@ -177,6 +224,12 @@ router.patch('/withdrawals/:id', requireAdmin, (req, res) => {
       wallet: withdrawal.wallet_address,
       note: admin_note || null,
     });
+
+    // Trigger fire-and-forget announcement if approved
+    if (newStatus === 'paid') {
+      const userIdentifier = withdrawal.username ? `@${withdrawal.username}` : withdrawal.telegram_id;
+      sendPayoutAnnouncement(withdrawal.amount, userIdentifier, withdrawal.wallet_address, admin_note);
+    }
 
     res.json({ success: true, status: newStatus });
   } catch (err) {
