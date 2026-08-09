@@ -32,5 +32,6 @@ export const submitSupportTicket = (body) => api.post('/support', body);
 export const getSupportTickets = () => api.get('/support');
 export const getLeaderboard = (params) => api.get('/users/leaderboard', { params });
 export const getChannelStatus = () => api.get('/users/channel-status');
+export const submitGameReward = (data) => api.post('/users/game-reward', data);
 
 export default api;

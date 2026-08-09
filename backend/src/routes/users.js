@@ -51,7 +51,7 @@ router.post('/register', (req, res) => {
 router.get('/me', extractTelegramUser, (req, res) => {
   try {
     const db = getDb();
-    const user = db.prepare('SELECT balance, total_earned, referral_code, created_at, first_name, username FROM users WHERE telegram_id = ?')
+    const user = db.prepare('SELECT balance, total_earned, referral_code, created_at, first_name, username, blitz_rounds, top_score, total_score_today, all_time_score FROM users WHERE telegram_id = ?')
                    .get(req.telegramUser.id);
     
     if (!user) {
@@ -77,6 +77,40 @@ router.get('/referrals', extractTelegramUser, (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch referrals' });
+  }
+});
+
+/* ─────────────────────────────────────────────────────────────────
+   POST /api/users/game-reward
+───────────────────────────────────────────────────────────────── */
+router.post('/game-reward', extractTelegramUser, (req, res) => {
+  try {
+    const { credits, score } = req.body;
+    if (credits === undefined || score === undefined) return res.status(400).json({ error: 'Missing credits or score' });
+
+    const db = getDb();
+    const user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(req.telegramUser.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    db.prepare(`
+      UPDATE users 
+      SET balance = balance + ?, 
+          total_earned = total_earned + ?,
+          blitz_rounds = blitz_rounds + 1,
+          top_score = CASE WHEN ? > top_score THEN ? ELSE top_score END,
+          total_score_today = total_score_today + ?,
+          all_time_score = all_time_score + ?,
+          last_seen = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(credits, credits, score, score, score, score, user.id);
+    
+    // Record activity
+    db.prepare('INSERT INTO activity_log (action, details) VALUES (?, ?)').run('game_reward_granted', `User ${req.telegramUser.id} earned ${credits} USDT from game score ${score}`);
+
+    res.json({ success: true, added: credits });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to process game reward' });
   }
 });
 

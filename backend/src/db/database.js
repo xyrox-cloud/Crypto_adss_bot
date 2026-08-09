@@ -111,6 +111,14 @@ function initDb() {
     db.exec('ALTER TABLE users ADD COLUMN total_ads_watched INTEGER DEFAULT 0');
   if (!userCols.includes('referral_count'))
     db.exec('ALTER TABLE users ADD COLUMN referral_count INTEGER DEFAULT 0');
+  if (!userCols.includes('blitz_rounds'))
+    db.exec('ALTER TABLE users ADD COLUMN blitz_rounds INTEGER DEFAULT 0');
+  if (!userCols.includes('top_score'))
+    db.exec('ALTER TABLE users ADD COLUMN top_score INTEGER DEFAULT 0');
+  if (!userCols.includes('total_score_today'))
+    db.exec('ALTER TABLE users ADD COLUMN total_score_today INTEGER DEFAULT 0');
+  if (!userCols.includes('all_time_score'))
+    db.exec('ALTER TABLE users ADD COLUMN all_time_score INTEGER DEFAULT 0');
 
   // Add new columns to existing ad_watches table if they don't exist (migration)
   const adWatchCols = db.pragma('table_info(ad_watches)').map(c => c.name);

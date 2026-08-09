@@ -197,6 +197,24 @@ const Home = () => {
         </div>
       </div>
 
+      {/* 2.5. BLITZ GAME CARD */}
+      <div 
+        className="bg-[#FF4500] rounded-3xl p-5 mb-4 flex justify-between items-center relative overflow-hidden"
+        onClick={() => navigate('/game')}
+      >
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none"></div>
+        <div>
+          <div className="bg-black/20 text-white text-[10px] font-bold px-2 py-1 rounded-full inline-block mb-2">
+            MINI-GAME
+          </div>
+          <h2 className="text-white font-extrabold text-2xl uppercase leading-none mb-1">BLITZ</h2>
+          <div className="text-white/80 text-xs font-bold">FIND THE ODD TILE</div>
+        </div>
+        <div className="bg-black text-white px-5 py-3 rounded-full font-bold text-sm">
+          PLAY
+        </div>
+      </div>
+
       {/* 3. DAILY CHECK-IN CARD */}
       <div className="bg-cardbg border border-cardborder rounded-3xl p-5">
         <div className="flex justify-between items-center mb-4">
