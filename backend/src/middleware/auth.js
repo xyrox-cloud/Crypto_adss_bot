@@ -74,7 +74,7 @@ function extractTelegramUser(req, res, next) {
       return res.status(401).json({ error: 'Unauthorized: Invalid Telegram initData' });
     }
     req.telegramUser = {
-      id: user.id.toString(),
+      id: String(user.id).split('.')[0],
       username: user.username || ''
     };
     return next();
@@ -86,7 +86,7 @@ function extractTelegramUser(req, res, next) {
   }
 
   req.telegramUser = {
-    id: telegramId,
+    id: String(telegramId).split('.')[0],
     username: telegramUsername || ''
   };
 

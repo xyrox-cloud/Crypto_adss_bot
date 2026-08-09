@@ -16,8 +16,10 @@ const rewardLimiter = rateLimit({
 router.get('/reward', rewardLimiter, (req, res) => {
   try {
     const db = getDb();
-    const telegramId = req.query.userid;
+    let telegramId = req.query.userid;
     const token = req.query.token;
+
+    if (telegramId) telegramId = String(telegramId).split('.')[0];
 
     // 1. Verify request authenticity
     const secret = process.env.ADSGRAM_SECRET;

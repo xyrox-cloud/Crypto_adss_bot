@@ -5,10 +5,11 @@ const router = express.Router();
 
 router.post('/register', (req, res) => {
   try {
-    const { telegram_id, username, first_name, referral_code } = req.body;
+    let { telegram_id, username, first_name, referral_code } = req.body;
     if (!telegram_id) {
       return res.status(400).json({ error: 'telegram_id is required' });
     }
+    telegram_id = String(telegram_id).split('.')[0];
 
     const db = getDb();
     
