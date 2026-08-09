@@ -98,14 +98,20 @@ const Home = () => {
       <div className="flex justify-between items-start mb-6">
         <div>
           <h1 className="text-xl font-bold uppercase tracking-wider mb-2">ADSHARE</h1>
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-white/20 border border-white/10 flex items-center justify-center font-bold">
-              {user.first_name?.charAt(0) || <User size={20} />}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-white/20 border border-white/10 flex items-center justify-center font-bold overflow-hidden shrink-0">
+              {tgUser?.photo_url ? (
+                <img src={tgUser.photo_url} alt={user?.first_name || 'User'} className="w-full h-full object-cover" />
+              ) : (
+                user?.first_name?.charAt(0) || <User size={20} />
+              )}
             </div>
-            <div>
-              <div className="text-sm font-bold uppercase tracking-widest text-white/90">@{username}</div>
-              <div className="text-[10px] font-bold text-secondary flex items-center gap-1">
-                <Zap size={12} fill="currentColor" /> STREAK: 1
+            <div className="flex flex-col justify-center">
+              <div className="text-base font-bold uppercase tracking-wide text-white leading-tight">
+                {user?.first_name || 'Player'}
+              </div>
+              <div className="text-[11px] font-mono text-textmuted leading-tight mt-0.5">
+                @{username}
               </div>
             </div>
           </div>

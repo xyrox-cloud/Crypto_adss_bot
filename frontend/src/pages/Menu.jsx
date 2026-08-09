@@ -26,10 +26,14 @@ const Menu = () => {
       {/* HEADER / BANNER */}
       <div className="bg-secondary px-5 py-4 rounded-none text-black relative flex items-center gap-4">
         <div 
-          className="bg-white/20 flex-shrink-0 flex items-center justify-center font-bold uppercase border-2 border-white/40 shadow-sm"
+          className="bg-white/20 flex-shrink-0 flex items-center justify-center font-bold uppercase border-2 border-white/40 shadow-sm overflow-hidden"
           style={{ width: '80px', height: '80px', borderRadius: '16px', fontSize: '2.5rem' }}
         >
-          {user?.first_name?.charAt(0) || <User size={40} strokeWidth={1.5} />}
+          {tgUser?.photo_url ? (
+            <img src={tgUser.photo_url} alt={user?.first_name || 'User'} className="w-full h-full object-cover" />
+          ) : (
+            user?.first_name?.charAt(0) || <User size={40} strokeWidth={1.5} />
+          )}
         </div>
         
         <div className="flex flex-col justify-center">
