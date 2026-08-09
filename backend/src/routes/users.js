@@ -58,7 +58,7 @@ router.post('/register', (req, res) => {
 router.get('/me', extractTelegramUser, (req, res) => {
   try {
     const db = getDb();
-    const user = db.prepare('SELECT balance, total_earned, referral_code, created_at, first_name, username, blitz_rounds, top_score, total_score_today, all_time_score FROM users WHERE telegram_id = ?')
+    const user = db.prepare('SELECT balance, total_earned, referral_code, created_at, first_name, username, blitz_rounds, top_score, total_score_today, all_time_score, last_daily_claim, daily_streak, last_minigame_claim FROM users WHERE telegram_id = ?')
                    .get(req.telegramUser.id);
     
     if (!user) {
@@ -285,6 +285,137 @@ router.get('/channel-status', extractTelegramUser, async (req, res) => {
   } catch (err) {
     console.error('[Channel Status]', err);
     res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+/* ─────────────────────────────────────────────────────────────────
+   POST /api/users/daily-claim
+───────────────────────────────────────────────────────────────── */
+router.post('/daily-claim', extractTelegramUser, (req, res) => {
+  try {
+    const db = getDb();
+    const telegramId = req.telegramUser.id;
+    const { getSettings, processReferralBonus } = require('../db/database');
+
+    const user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(telegramId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.banned) return res.status(403).json({ error: 'Account is banned' });
+
+    const now = new Date();
+    const lastClaim = user.last_daily_claim ? new Date(user.last_daily_claim) : null;
+    
+    // Check if claimed in the last 24 hours
+    if (lastClaim && (now - lastClaim) < 24 * 60 * 60 * 1000) {
+      const waitMs = (24 * 60 * 60 * 1000) - (now - lastClaim);
+      const hours = Math.floor(waitMs / (1000 * 60 * 60));
+      const minutes = Math.floor((waitMs % (1000 * 60 * 60)) / (1000 * 60));
+      return res.status(429).json({ error: \`Please wait \${hours}h \${minutes}m before claiming again\` });
+    }
+
+    const settings = getSettings();
+    const rewardUsdt = parseFloat(settings.daily_bonus_amount || '0.001');
+
+    let newStreak = user.daily_streak + 1;
+    // Reset streak if more than 48 hours have passed
+    if (lastClaim && (now - lastClaim) > 48 * 60 * 60 * 1000) {
+      newStreak = 1;
+    }
+
+    const tx = db.transaction(() => {
+      db.prepare(\`
+        UPDATE users
+        SET balance = balance + ?,
+            total_earned = total_earned + ?,
+            last_daily_claim = CURRENT_TIMESTAMP,
+            daily_streak = ?,
+            last_seen = CURRENT_TIMESTAMP
+        WHERE id = ?
+      \`).run(rewardUsdt, rewardUsdt, newStreak, user.id);
+
+      db.prepare(\`
+        INSERT INTO ad_rewards (user_id, amount, ip)
+        VALUES (?, ?, ?)
+      \`).run(user.id, rewardUsdt, req.ip || req.connection?.remoteAddress || 'system');
+
+      db.prepare(\`
+        INSERT INTO activity_log (action, details) VALUES (?, ?)
+      \`).run('daily_bonus_granted', \`User \${telegramId} claimed daily bonus \${rewardUsdt} USDT. Streak: \${newStreak}\`);
+    });
+
+    tx();
+
+    // Check referral bonus
+    const updatedUser = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+    processReferralBonus(db, updatedUser, req.ip || req.connection?.remoteAddress);
+
+    res.json({ success: true, reward: rewardUsdt, streak: newStreak });
+  } catch (err) {
+    console.error('[Daily Claim Error]', err);
+    res.status(500).json({ error: 'Failed to claim daily bonus' });
+  }
+});
+
+/* ─────────────────────────────────────────────────────────────────
+   POST /api/users/minigame-claim
+───────────────────────────────────────────────────────────────── */
+router.post('/minigame-claim', extractTelegramUser, (req, res) => {
+  try {
+    const db = getDb();
+    const telegramId = req.telegramUser.id;
+    const { getSettings, processReferralBonus } = require('../db/database');
+
+    const user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(telegramId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.banned) return res.status(403).json({ error: 'Account is banned' });
+
+    const now = new Date();
+    const lastClaim = user.last_minigame_claim ? new Date(user.last_minigame_claim) : null;
+    
+    // Check if claimed in the last 24 hours
+    if (lastClaim && (now - lastClaim) < 24 * 60 * 60 * 1000) {
+      const waitMs = (24 * 60 * 60 * 1000) - (now - lastClaim);
+      const hours = Math.floor(waitMs / (1000 * 60 * 60));
+      const minutes = Math.floor((waitMs % (1000 * 60 * 60)) / (1000 * 60));
+      return res.status(429).json({ error: \`Please wait \${hours}h \${minutes}m before playing again\` });
+    }
+
+    const settings = getSettings();
+    const minReward = parseFloat(settings.minigame_min_reward || '0.001');
+    const maxReward = parseFloat(settings.minigame_max_reward || '0.005');
+    
+    // Random reward between min and max
+    const rewardUsdt = Number((Math.random() * (maxReward - minReward) + minReward).toFixed(4));
+
+    const tx = db.transaction(() => {
+      db.prepare(\`
+        UPDATE users
+        SET balance = balance + ?,
+            total_earned = total_earned + ?,
+            last_minigame_claim = CURRENT_TIMESTAMP,
+            last_seen = CURRENT_TIMESTAMP
+        WHERE id = ?
+      \`).run(rewardUsdt, rewardUsdt, user.id);
+
+      db.prepare(\`
+        INSERT INTO ad_rewards (user_id, amount, ip)
+        VALUES (?, ?, ?)
+      \`).run(user.id, rewardUsdt, req.ip || req.connection?.remoteAddress || 'system');
+
+      db.prepare(\`
+        INSERT INTO activity_log (action, details) VALUES (?, ?)
+      \`).run('minigame_reward_granted', \`User \${telegramId} won minigame reward \${rewardUsdt} USDT.\`);
+    });
+
+    tx();
+
+    // Check referral bonus
+    const updatedUser = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+    processReferralBonus(db, updatedUser, req.ip || req.connection?.remoteAddress);
+
+    res.json({ success: true, reward: rewardUsdt });
+  } catch (err) {
+    console.error('[Minigame Claim Error]', err);
+    res.status(500).json({ error: 'Failed to process minigame claim' });
   }
 });
 

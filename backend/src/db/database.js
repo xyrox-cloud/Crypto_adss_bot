@@ -32,7 +32,11 @@ function initDb() {
       referred_by TEXT,
       banned INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      last_seen DATETIME DEFAULT CURRENT_TIMESTAMP
+      last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_daily_claim DATETIME,
+      daily_streak INTEGER DEFAULT 0,
+      last_minigame_claim DATETIME,
+      referral_bonus_paid INTEGER DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS ad_watches (
@@ -119,6 +123,14 @@ function initDb() {
     db.exec('ALTER TABLE users ADD COLUMN total_score_today INTEGER DEFAULT 0');
   if (!userCols.includes('all_time_score'))
     db.exec('ALTER TABLE users ADD COLUMN all_time_score INTEGER DEFAULT 0');
+  if (!userCols.includes('last_daily_claim'))
+    db.exec('ALTER TABLE users ADD COLUMN last_daily_claim DATETIME');
+  if (!userCols.includes('daily_streak'))
+    db.exec('ALTER TABLE users ADD COLUMN daily_streak INTEGER DEFAULT 0');
+  if (!userCols.includes('last_minigame_claim'))
+    db.exec('ALTER TABLE users ADD COLUMN last_minigame_claim DATETIME');
+  if (!userCols.includes('referral_bonus_paid'))
+    db.exec('ALTER TABLE users ADD COLUMN referral_bonus_paid INTEGER DEFAULT 0');
 
   // Add new columns to existing ad_watches table if they don't exist (migration)
   const adWatchCols = db.pragma('table_info(ad_watches)').map(c => c.name);
@@ -135,6 +147,10 @@ function initDb() {
     seedSettings.run('max_ads_per_hour',   process.env.MAX_ADS_PER_HOUR || '5',     'Max ads a user can watch per hour');
     seedSettings.run('min_withdrawal',     process.env.MIN_WITHDRAWAL   || '2.00',  'Minimum USDT amount for a withdrawal request');
     seedSettings.run('ad_cooldown_secs',   '30',                                     'Seconds a user must wait between ad watches');
+    seedSettings.run('daily_bonus_amount', '0.001',                                  'USDT amount for daily check-in bonus');
+    seedSettings.run('minigame_min_reward','0.001',                                  'Minimum USDT reward for daily minigame');
+    seedSettings.run('minigame_max_reward','0.005',                                  'Maximum USDT reward for daily minigame');
+    seedSettings.run('referral_bonus',     '0.005',                                  'One-time USDT bonus for referring a user who completes an action');
   });
   seedMany();
 }
@@ -162,9 +178,54 @@ function generateReferralCode() {
   return crypto.randomBytes(4).toString('hex').slice(0, 8);
 }
 
+/**
+ * Process one-time referral bonus if the user was referred and hasn't triggered the bonus yet.
+ */
+function processReferralBonus(db, user, ipAddress) {
+  if (!user.referred_by || user.referral_bonus_paid) return;
+
+  const referrer = db.prepare('SELECT id, telegram_id FROM users WHERE telegram_id = ?').get(user.referred_by);
+  if (!referrer) return;
+
+  const settings = getSettings();
+  const bonusAmount = parseFloat(settings.referral_bonus || '0.005');
+
+  const tx = db.transaction(() => {
+    // Mark user as having paid the referral bonus
+    db.prepare('UPDATE users SET referral_bonus_paid = 1 WHERE id = ?').run(user.id);
+
+    // Give bonus to referrer
+    db.prepare(`
+      UPDATE users
+      SET balance = balance + ?,
+          total_earned = total_earned + ?,
+          referral_count = referral_count + 1
+      WHERE id = ?
+    `).run(bonusAmount, bonusAmount, referrer.id);
+
+    // Record reward
+    db.prepare(`
+      INSERT INTO ad_rewards (user_id, amount, ip)
+      VALUES (?, ?, ?)
+    `).run(referrer.id, bonusAmount, ipAddress || 'system');
+
+    // Record activity
+    db.prepare(`
+      INSERT INTO activity_log (action, details) VALUES (?, ?)
+    `).run('referral_bonus_granted', \`Referrer \${referrer.telegram_id} earned \${bonusAmount} USDT for referring \${user.telegram_id}\`);
+  });
+  
+  try {
+    tx();
+  } catch (err) {
+    console.error('Failed to process referral bonus:', err);
+  }
+}
+
 module.exports = {
   initDb,
   getDb,
   getSettings,
-  generateReferralCode
+  generateReferralCode,
+  processReferralBonus
 };

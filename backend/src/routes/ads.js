@@ -126,6 +126,12 @@ router.get('/reward', rewardLimiter, (req, res) => {
 
     watchTx();
 
+    // Check for referral bonus if this is their first action
+    // Fetch user again to have the latest state (referral_bonus_paid)
+    const updatedUser = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+    const { processReferralBonus } = require('../db/database');
+    processReferralBonus(db, updatedUser, ipAddress);
+
     // 7. Return plain 200 OK
     res.status(200).json({ success: true });
 

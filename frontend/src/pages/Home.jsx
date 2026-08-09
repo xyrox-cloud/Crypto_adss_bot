@@ -4,7 +4,9 @@ import { useUser } from '../context/UserContext';
 import { useToast } from '../context/ToastContext';
 import { getAdStats } from '../api/api';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { Settings, User, Play, ChevronRight, Zap, Target, Star } from 'lucide-react';
+import SpinWheel from '../components/SpinWheel';
+import { Settings, User, Play, ChevronRight, Zap, Target, Star, Calendar, Gift, X } from 'lucide-react';
+import api from '../api/api';
 
 const MAX_ADS_PER_DAY = parseInt(import.meta.env.VITE_MAX_ADS_PER_DAY || '20', 10);
 
@@ -16,6 +18,8 @@ const Home = () => {
   const ENABLE_TASKS = true; // Flag to easily toggle the task/quest feature
 
   const [loadingAd, setLoadingAd] = useState(false);
+  const [claimingDaily, setClaimingDaily] = useState(false);
+  const [showSpinWheel, setShowSpinWheel] = useState(false);
   const [stats, setStats] = useState({ ads_today: 0, ads_this_week: 0, total_earned: 0 });
 
   useEffect(() => { fetchStats(); }, []);
@@ -68,6 +72,21 @@ const Home = () => {
       }
     } finally {
       setLoadingAd(false);
+    }
+  };
+
+  const handleDailyClaim = async () => {
+    if (claimingDaily) return;
+    setClaimingDaily(true);
+    try {
+      const res = await api.post('/users/daily-claim');
+      showToast(`Daily bonus claimed! ${res.data.reward} USDT`, 'success');
+      await refreshUser();
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Failed to claim daily bonus';
+      showToast(msg, 'error');
+    } finally {
+      setClaimingDaily(false);
     }
   };
 
@@ -127,123 +146,128 @@ const Home = () => {
         </div>
       </div>
 
-      {/* 1. GREEN USDT EARN CARD */}
+      {/* THREE EARNING OPTIONS */}
+      <h3 className="font-mono font-bold text-lg text-white tracking-wider mb-4 mt-6">EARN USDT</h3>
+      
+      {/* 1. DAILY BONUS */}
+      <div className="bg-cardbg border border-cardborder rounded-3xl p-5 mb-4">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center text-primary">
+              <Calendar size={24} fill="currentColor" />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg leading-tight">Daily Bonus</h3>
+              <div className="text-textmuted text-xs mt-0.5">Free USDT every 24h</div>
+            </div>
+          </div>
+          <button 
+            onClick={handleDailyClaim}
+            disabled={claimingDaily}
+            className="bg-primary text-black font-extrabold px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
+          >
+            {claimingDaily ? 'CLAIMING...' : 'CLAIM'}
+          </button>
+        </div>
+        
+        <div className="flex justify-between gap-1 mt-4">
+          {days.map((d, i) => {
+            const isToday = i === normalizedDay;
+            const isClaimedToday = user?.last_daily_claim && (new Date() - new Date(user.last_daily_claim) < 24 * 60 * 60 * 1000);
+            return (
+              <div 
+                key={i} 
+                className={`flex-1 aspect-[3/4] flex flex-col items-center justify-center rounded-xl border ${
+                  isToday 
+                    ? (isClaimedToday ? 'bg-success/20 border-success/50 text-success' : 'bg-primary border-primary text-black')
+                    : i < normalizedDay
+                      ? 'bg-success/10 border-success/30 text-success'
+                      : 'bg-transparent border-cardborder text-textmuted'
+                }`}
+              >
+                <div className="text-xs font-bold">{d}</div>
+                <div className="text-[10px] mt-1 opacity-60">Day {i+1}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 2. PLAY & EARN (MINI-GAME) */}
       <div 
-        className="bg-[#26A17B] rounded-3xl p-5 mb-4 relative overflow-hidden" 
+        className="bg-[#FF4500] rounded-3xl p-5 mb-4 flex justify-between items-center relative overflow-hidden"
+        onClick={() => setShowSpinWheel(true)}
+      >
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none"></div>
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center border border-white/20 shadow-lg">
+            <Gift size={28} className="text-white" />
+          </div>
+          <div>
+            <div className="bg-black/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mb-1">
+              FREE
+            </div>
+            <h2 className="text-white font-extrabold text-2xl uppercase leading-none mb-1">PLAY & EARN</h2>
+            <div className="text-white/90 text-xs font-bold">SPIN FOR DAILY USDT</div>
+          </div>
+        </div>
+        <ChevronRight size={24} className="text-white opacity-80" />
+      </div>
+
+      {/* 3. WATCH AD FOR EXTRA REWARD */}
+      <div 
+        className="bg-[#26A17B] rounded-3xl p-5 mb-6 relative overflow-hidden" 
         onClick={handleWatchAd}
         role="button"
       >
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none"></div>
         
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center relative shadow-sm">
-            <svg width="24" height="24" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M100 0C44.7715 0 0 44.7715 0 100C0 155.228 44.7715 200 100 200C155.228 200 200 155.228 200 100C200 44.7715 155.228 0 100 0Z" fill="#26A17B"/>
-              <path d="M100 128.57C125.753 128.57 149.255 124.966 166.521 119.262V97.3595C149.255 103.064 125.753 106.667 100 106.667C74.2468 106.667 50.7453 103.064 33.4795 97.3595V119.262C50.7453 124.966 74.2468 128.57 100 128.57Z" fill="white"/>
-              <path d="M100 78.0963C126.974 78.0963 151.353 74.0205 169.567 67.5878V42.8574H116.536V62.4334C111.233 62.9067 105.714 63.1674 100 63.1674C94.2863 63.1674 88.7668 62.9067 83.4636 62.4334V42.8574H30.4326V67.5878C48.6465 74.0205 73.0255 78.0963 100 78.0963Z" fill="white"/>
-              <path d="M83.4639 171.428H116.536V117.412C111.233 118.067 105.714 118.423 100 118.423C94.2865 118.423 88.7671 118.067 83.4639 117.412V171.428Z" fill="white"/>
-            </svg>
-            <div className="absolute -bottom-1 -right-2 bg-[#F0B90B] text-black text-[8px] font-extrabold px-1 py-0.5 rounded-sm border-2 border-[#26A17B] shadow-sm">
+          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center relative shadow-sm border-2 border-[#1c7a5c]">
+            <Play size={24} className="text-[#26A17B]" fill="currentColor" />
+            <div className="absolute -bottom-1.5 -right-2 bg-[#F0B90B] text-black text-[8px] font-extrabold px-1.5 py-0.5 rounded-md shadow-sm border border-black/10">
               BEP20
             </div>
           </div>
           <div>
-            <h2 className="text-black font-extrabold text-2xl uppercase leading-none">EARN REAL USDT</h2>
-            <div className="text-black/70 text-[10px] font-bold mt-1 tracking-wide">USDT (BEP20) REWARDS DIRECT TO WALLET</div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          <div className="border border-black/10 rounded-2xl p-2 text-center bg-black/5">
-            <div className="text-black font-extrabold text-xl">{stats.ads_today}</div>
-            <div className="text-black/60 text-[9px] font-bold">TODAY</div>
-          </div>
-          <div className="border border-black/10 rounded-2xl p-2 text-center bg-black/5">
-            <div className="text-black font-extrabold text-xl">{MAX_ADS_PER_DAY}</div>
-            <div className="text-black/60 text-[9px] font-bold">LIMIT</div>
-          </div>
-          <div className="border border-black/10 rounded-2xl p-2 text-center bg-black/5">
-            <div className="text-black font-extrabold text-xl">${Number(stats.total_earned || 0).toFixed(2)}</div>
-            <div className="text-black/60 text-[9px] font-bold">EARNED</div>
-          </div>
-        </div>
-
-        <div className="flex justify-between items-end mb-2">
-          <div className="text-black text-xs font-bold">
-            {loadingAd ? 'LOADING AD...' : adsRemaining > 0 ? `${adsRemaining} ADS AVAILABLE` : 'DAILY LIMIT REACHED'}
-          </div>
-          {!loadingAd && adsRemaining > 0 && <ChevronRight size={16} className="text-black" />}
-        </div>
-        <div className="h-1.5 bg-black/20 rounded-full overflow-hidden">
-          <div className="h-full bg-black rounded-full" style={{ width: `${progressPercent}%` }}></div>
-        </div>
-      </div>
-
-      {/* 2. ORANGE GAME CARD */}
-      <div 
-        className="bg-secondary rounded-3xl p-5 mb-4 flex justify-between items-center relative overflow-hidden"
-        onClick={() => navigate('/referrals')}
-      >
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none"></div>
-        <div>
-          <div className="bg-black/20 text-black text-[10px] font-bold px-2 py-1 rounded-full inline-block mb-2">
-            MULTIPLIER
-          </div>
-          <h2 className="text-black font-extrabold text-2xl uppercase leading-none mb-1">REFERRALS</h2>
-          <div className="text-black/70 text-xs font-bold">EARN 10% FOR LIFE</div>
-        </div>
-        <div className="bg-black text-white px-5 py-3 rounded-full font-bold text-sm">
-          INVITE
-        </div>
-      </div>
-
-      {/* 2.5. BLITZ GAME CARD */}
-      <div 
-        className="bg-[#FF4500] rounded-3xl p-5 mb-4 flex justify-between items-center relative overflow-hidden"
-        onClick={() => navigate('/game')}
-      >
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none"></div>
-        <div>
-          <div className="bg-black/20 text-white text-[10px] font-bold px-2 py-1 rounded-full inline-block mb-2">
-            MINI-GAME
-          </div>
-          <h2 className="text-white font-extrabold text-2xl uppercase leading-none mb-1">BLITZ</h2>
-          <div className="text-white/80 text-xs font-bold">FIND THE ODD TILE</div>
-        </div>
-        <div className="bg-black text-white px-5 py-3 rounded-full font-bold text-sm">
-          PLAY
-        </div>
-      </div>
-
-      {/* 3. DAILY CHECK-IN CARD */}
-      <div className="bg-cardbg border border-cardborder rounded-3xl p-5">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h3 className="font-bold text-lg">DAILY CHECK-IN</h3>
-            <div className="text-textmuted text-xs mt-1">LOG IN 7 DAYS FOR BONUS</div>
-          </div>
-          <div className="border border-success text-success px-3 py-1 rounded-full text-xs font-bold">
-            DONE
-          </div>
-        </div>
-        <div className="flex justify-between gap-1">
-          {days.map((d, i) => (
-            <div 
-              key={i} 
-              className={`flex-1 aspect-[3/4] flex flex-col items-center justify-center rounded-xl border ${
-                i === normalizedDay 
-                  ? 'bg-white border-white text-black' 
-                  : i < normalizedDay
-                    ? 'bg-success/10 border-success/30 text-success'
-                    : 'bg-transparent border-cardborder text-textmuted'
-              }`}
-            >
-              <div className="text-xs font-bold">{d}</div>
-              <div className="text-[10px] mt-1 opacity-50">{i+1}</div>
+            <div className="bg-black/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mb-1">
+              EXTRA REWARD
             </div>
-          ))}
+            <h2 className="text-white font-extrabold text-2xl uppercase leading-none">WATCH AD</h2>
+            <div className="text-white/90 text-[10px] font-bold mt-1 tracking-wide">EARN MORE USDT INSTANTLY</div>
+          </div>
+        </div>
+
+        <div className="bg-black/10 rounded-2xl p-3 flex justify-between items-center">
+          <div>
+            <div className="text-white/70 text-[10px] font-bold uppercase">Today's Progress</div>
+            <div className="text-white font-bold text-sm">{stats.ads_today} / {MAX_ADS_PER_DAY} Ads</div>
+          </div>
+          <div className="text-right">
+            <div className="text-white/70 text-[10px] font-bold uppercase">Total Earned</div>
+            <div className="text-white font-bold text-sm">${Number(stats.total_earned || 0).toFixed(4)}</div>
+          </div>
         </div>
       </div>
+      
+      {/* SPIN WHEEL MODAL */}
+      {showSpinWheel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-cardbg border border-cardborder rounded-3xl w-full max-w-sm overflow-hidden relative">
+            <button 
+              className="absolute top-4 right-4 bg-white/10 p-2 rounded-full hover:bg-white/20 transition-colors z-10"
+              onClick={() => setShowSpinWheel(false)}
+            >
+              <X size={20} className="text-white" />
+            </button>
+            <div className="p-6 text-center">
+              <h2 className="text-2xl font-extrabold text-white uppercase mb-2">Daily Spin</h2>
+              <p className="text-textmuted text-sm mb-6">Play once a day for a chance to win free USDT!</p>
+              <SpinWheel onComplete={() => setTimeout(() => setShowSpinWheel(false), 2000)} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* TODAY'S QUESTS */}
       <div className={ENABLE_TASKS ? "mb-6 mt-6" : "mb-6 mt-6 opacity-50 grayscale pointer-events-none"}>
