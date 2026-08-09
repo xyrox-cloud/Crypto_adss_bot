@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
+import Earn from './pages/Earn';
 import History from './pages/History';
 import Withdraw from './pages/Withdraw';
 import Referrals from './pages/Referrals';
@@ -95,6 +96,7 @@ function App() {
           <div className="w-full h-full">
             <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/earn" element={<Earn />} />
               <Route path="/history" element={<History />} />
               <Route path="/withdraw" element={<Withdraw />} />
               <Route path="/referrals" element={<Referrals />} />

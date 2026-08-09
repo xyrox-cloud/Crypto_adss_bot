@@ -141,7 +141,7 @@ const Withdraw = () => {
         <strong>ℹ️ Important</strong><br />
         <ul style={{ paddingLeft: 16, marginTop: 8, lineHeight: '1.7' }}>
           <li>Withdrawals are processed manually within <strong>1–3 business days</strong></li>
-          <li>Use a valid <strong>USDT BEP20 (BNB Smart Chain)</strong> address</li>
+          <li>Make sure your address supports <strong>BEP20 (BSC)</strong> network.</li>
           <li>Funds sent to wrong network or address <strong>cannot be recovered</strong></li>
         </ul>
       </div>

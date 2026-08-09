@@ -12,11 +12,11 @@
   --bg-surface:     #121826;
   --bg-elevated:    #1A2233;
 
-  /* Accent — steel-blue */
-  --accent:         #5C89C7;
-  --accent-dim:     #3E5F8A;
-  --accent-glow:    rgba(92, 137, 199, 0.35);
-  --accent-subtle:  rgba(92, 137, 199, 0.12);
+  /* Accent — Tether Green */
+  --accent:         #26A17B;
+  --accent-dim:     #1C7559;
+  --accent-glow:    rgba(38, 161, 123, 0.35);
+  --accent-subtle:  rgba(38, 161, 123, 0.12);
 
   /* Currency — brass/gold */
   --gold:           #C9A055;
@@ -43,10 +43,10 @@
   --shadow-glow:    0 0 28px rgba(92, 137, 199, 0.22);
 
   /* Radii */
-  --r-sm:  10px;
-  --r-md:  14px;
-  --r-lg:  18px;
-  --r-xl:  22px;
+  --r-sm:  0px;
+  --r-md:  0px;
+  --r-lg:  0px;
+  --r-xl:  0px;
 
   /* Layout */
   --nav-h: 68px;

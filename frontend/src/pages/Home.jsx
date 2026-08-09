@@ -12,6 +12,9 @@ const Home = () => {
   const { user, refreshUser } = useUser();
   const { showToast } = useToast();
   const navigate = useNavigate();
+
+  const ENABLE_TASKS = false; // Flag to easily toggle the task/quest feature
+
   const [loadingAd, setLoadingAd] = useState(false);
   const [stats, setStats] = useState({ ads_today: 0, ads_this_week: 0, total_earned: 0 });
 
@@ -84,6 +87,11 @@ const Home = () => {
   const currentDay = new Date().getDay() - 1; // 0 for Mon
   const normalizedDay = currentDay < 0 ? 6 : currentDay;
 
+  // Dynamic quest stats pulled from user data (fallback to 0 if not present)
+  const blitzRounds = user?.blitz_rounds || 0;
+  const topScore = user?.top_score || 0;
+  const totalScore = user?.total_score_today || 0;
+
   return (
     <div className="pb-24 px-4 pt-4">
       {/* HEADER */}
@@ -113,21 +121,29 @@ const Home = () => {
         </div>
       </div>
 
-      {/* 1. BLUE EARN CARD */}
+      {/* 1. GREEN USDT EARN CARD */}
       <div 
-        className="bg-primary rounded-3xl p-5 mb-4 relative overflow-hidden" 
+        className="bg-[#26A17B] rounded-3xl p-5 mb-4 relative overflow-hidden" 
         onClick={handleWatchAd}
         role="button"
       >
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none"></div>
         
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-            <Play className="text-primary ml-1" size={20} fill="currentColor" />
+          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center relative shadow-sm">
+            <svg width="24" height="24" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M100 0C44.7715 0 0 44.7715 0 100C0 155.228 44.7715 200 100 200C155.228 200 200 155.228 200 100C200 44.7715 155.228 0 100 0Z" fill="#26A17B"/>
+              <path d="M100 128.57C125.753 128.57 149.255 124.966 166.521 119.262V97.3595C149.255 103.064 125.753 106.667 100 106.667C74.2468 106.667 50.7453 103.064 33.4795 97.3595V119.262C50.7453 124.966 74.2468 128.57 100 128.57Z" fill="white"/>
+              <path d="M100 78.0963C126.974 78.0963 151.353 74.0205 169.567 67.5878V42.8574H116.536V62.4334C111.233 62.9067 105.714 63.1674 100 63.1674C94.2863 63.1674 88.7668 62.9067 83.4636 62.4334V42.8574H30.4326V67.5878C48.6465 74.0205 73.0255 78.0963 100 78.0963Z" fill="white"/>
+              <path d="M83.4639 171.428H116.536V117.412C111.233 118.067 105.714 118.423 100 118.423C94.2865 118.423 88.7671 118.067 83.4639 117.412V171.428Z" fill="white"/>
+            </svg>
+            <div className="absolute -bottom-1 -right-2 bg-[#F0B90B] text-black text-[8px] font-extrabold px-1 py-0.5 rounded-sm border-2 border-[#26A17B] shadow-sm">
+              BEP20
+            </div>
           </div>
           <div>
-            <h2 className="text-black font-extrabold text-2xl uppercase leading-none">WATCH ADS</h2>
-            <div className="text-black/70 text-xs font-bold mt-1">EARN REAL USDT REWARDS</div>
+            <h2 className="text-black font-extrabold text-2xl uppercase leading-none">EARN REAL USDT</h2>
+            <div className="text-black/70 text-[10px] font-bold mt-1 tracking-wide">USDT (BEP20) REWARDS DIRECT TO WALLET</div>
           </div>
         </div>
 
@@ -202,6 +218,122 @@ const Home = () => {
               <div className="text-[10px] mt-1 opacity-50">{i+1}</div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* TODAY'S QUESTS */}
+      <div className={ENABLE_TASKS ? "mb-6 mt-6" : "mb-6 mt-6 opacity-50 grayscale pointer-events-none"}>
+        <div className="flex justify-between items-end mb-2">
+          <h3 className="font-mono font-bold text-lg text-white tracking-wider">Today's quests</h3>
+          <div className="text-[10px] text-textmuted font-mono uppercase">Resets 00:00 UTC</div>
+        </div>
+        <div className="h-0.5 bg-cardborder w-full mb-4 rounded-full overflow-hidden">
+          <div className="h-full bg-secondary rounded-full" style={{ width: `${(( (blitzRounds >= 3 ? 1 : 0) + (topScore >= 400 ? 1 : 0) + (totalScore >= 1200 ? 1 : 0) ) / 3) * 100}%` }}></div>
+        </div>
+
+        <div className="space-y-3">
+          {/* Quest 1 */}
+          <div className="bg-cardbg border border-cardborder rounded-2xl p-4">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <div className="font-bold text-sm text-white">Warm up</div>
+                <div className="text-[11px] text-textmuted">Finish 3 Blitz rounds</div>
+              </div>
+              <div className="border border-secondary text-secondary px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1">
+                <Target size={12} /> 120
+              </div>
+            </div>
+            <div className="flex justify-between items-end mb-1 mt-2">
+              <div className="text-[10px] font-mono text-textmuted">PROGRESS</div>
+              <div className="text-xs font-mono font-bold">{Math.min(blitzRounds, 3)} / 3</div>
+            </div>
+            <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
+              <div className="h-full bg-secondary rounded-full" style={{ width: `${Math.min((blitzRounds/3)*100, 100)}%` }}></div>
+            </div>
+          </div>
+
+          {/* Quest 2 */}
+          <div className="bg-cardbg border border-cardborder rounded-2xl p-4">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <div className="font-bold text-sm text-white">Sharp eyes</div>
+                <div className="text-[11px] text-textmuted">Score 400 in a single round</div>
+              </div>
+              <div className="border border-secondary text-secondary px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1">
+                <Target size={12} /> 200
+              </div>
+            </div>
+            <div className="flex justify-between items-end mb-1 mt-2">
+              <div className="text-[10px] font-mono text-textmuted">PROGRESS</div>
+              <div className="text-xs font-mono font-bold">{Math.min(topScore, 400)} / 400</div>
+            </div>
+            <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
+              <div className="h-full bg-secondary rounded-full" style={{ width: `${Math.min((topScore/400)*100, 100)}%` }}></div>
+            </div>
+          </div>
+
+          {/* Quest 3 */}
+          <div className="bg-cardbg border border-cardborder rounded-2xl p-4">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <div className="font-bold text-sm text-white">Grinder</div>
+                <div className="text-[11px] text-textmuted">Score 1,200 points total today</div>
+              </div>
+              <div className="border border-secondary text-secondary px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1">
+                <Target size={12} /> 260
+              </div>
+            </div>
+            <div className="flex justify-between items-end mb-1 mt-2">
+              <div className="text-[10px] font-mono text-textmuted">PROGRESS</div>
+              <div className="text-xs font-mono font-bold">{Math.min(totalScore, 1200)} / 1200</div>
+            </div>
+            <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
+              <div className="h-full bg-secondary rounded-full" style={{ width: `${Math.min((totalScore/1200)*100, 100)}%` }}></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* OPTIONAL BONUSES */}
+      <div className="mb-6">
+        <div className="flex justify-between items-end mb-2">
+          <h3 className="font-mono font-bold text-lg text-white tracking-wider">Optional bonuses</h3>
+        </div>
+        <div className="h-0.5 bg-cardborder w-full mb-4"></div>
+        
+        <div className="bg-secondary/10 border border-secondary/20 rounded-3xl p-5 relative overflow-hidden">
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-secondary/20 rounded-full flex items-center justify-center text-secondary">
+                <Play size={20} fill="currentColor" />
+              </div>
+              <div>
+                <h4 className="font-bold text-white text-lg leading-none">Credits drop</h4>
+                <div className="text-xs text-textmuted mt-1">Watch a short ad for a Credits bonus.</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2 mb-4">
+            <div className="border border-secondary/30 text-secondary px-2 py-1 rounded-full text-[10px] font-bold">
+              {adsRemaining} of 20 left today
+            </div>
+            <div className="bg-black/30 text-white/50 px-2 py-1 rounded-full text-[10px] font-bold">
+              OPTIONAL
+            </div>
+          </div>
+
+          <button 
+            onClick={handleWatchAd} 
+            disabled={loadingAd || adsRemaining <= 0}
+            className="w-full bg-secondary text-black font-bold py-3 rounded-2xl flex justify-center items-center gap-2 hover:bg-secondary/90 transition-colors disabled:opacity-50"
+          >
+            {loadingAd ? 'LOADING...' : adsRemaining > 0 ? 'WATCH AD → +150' : 'LIMIT REACHED'}
+          </button>
+          
+          <div className="text-center text-[10px] text-textmuted mt-3">
+            Play Blitz or claim your daily check-in to earn Credits for free.
+          </div>
         </div>
       </div>
     </div>
