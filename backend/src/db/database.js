@@ -80,6 +80,15 @@ function initDb() {
       details TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS ad_rewards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      amount REAL NOT NULL,
+      ip TEXT,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
   `);
 
   // Add new columns to existing users table if they don't exist (migration)
@@ -91,11 +100,17 @@ function initDb() {
   if (!userCols.includes('referral_count'))
     db.exec('ALTER TABLE users ADD COLUMN referral_count INTEGER DEFAULT 0');
 
+  // Add new columns to existing ad_watches table if they don't exist (migration)
+  const adWatchCols = db.pragma('table_info(ad_watches)').map(c => c.name);
+  if (!adWatchCols.includes('source'))
+    db.exec('ALTER TABLE ad_watches ADD COLUMN source TEXT DEFAULT "client"');
+
   // Seed default settings if not present
   const seedSettings = db.prepare(`INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)`);
   const seedMany = db.transaction(() => {
     seedSettings.run('reward_per_ad',      process.env.AD_REWARD_USDT   || '0.01',  'USDT paid out per ad watched (user + platform share combined)');
     seedSettings.run('platform_cut_pct',   '40',                                     'Platform keeps this % of each ad reward');
+    seedSettings.run('revenue_split',      '60',                                     'User % cut of the ad reward');
     seedSettings.run('max_ads_per_day',    process.env.MAX_ADS_PER_DAY  || '20',    'Max ads a user can watch per calendar day');
     seedSettings.run('min_withdrawal',     process.env.MIN_WITHDRAWAL   || '2.00',  'Minimum USDT amount for a withdrawal request');
     seedSettings.run('ad_cooldown_secs',   '30',                                     'Seconds a user must wait between ad watches');

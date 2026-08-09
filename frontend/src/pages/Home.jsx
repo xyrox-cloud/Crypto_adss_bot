@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { useToast } from '../context/ToastContext';
-import { watchedAd, getAdStats } from '../api/api';
+import { getAdStats } from '../api/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const MAX_ADS_PER_DAY = parseInt(import.meta.env.VITE_MAX_ADS_PER_DAY || '20', 10);
@@ -54,8 +54,9 @@ const Home = () => {
       if (!window.Adsgram) {
         if (import.meta.env.DEV) {
           await new Promise(r => setTimeout(r, 1200));
-          const res = await watchedAd({ result: 'done', dev: true });
-          showToast(`✅ Earned $${Number(res.data.reward || 0).toFixed(4)} USDT`, 'success');
+          showToast('✅ Ad watched! Reward will be credited via webhook.', 'success');
+          // Wait briefly for webhook if testing locally (optional)
+          await new Promise(r => setTimeout(r, 500));
           await refreshUser();
           fetchStats();
           return;
@@ -67,8 +68,11 @@ const Home = () => {
       const adController = window.Adsgram.init({ blockId });
       const result = await adController.show();
 
-      const res = await watchedAd({ result });
-      showToast(`✅ Earned $${Number(res.data.reward || 0).toFixed(4)} USDT`, 'success');
+      // We no longer call watchedAd on client; Adsgram webhook handles crediting.
+      showToast('✅ Ad watched! Reward is being credited.', 'success');
+      
+      // Optionally wait a second for server-to-server webhook to process before refreshing
+      await new Promise(r => setTimeout(r, 1500));
       await refreshUser();
       fetchStats();
     } catch (err) {
