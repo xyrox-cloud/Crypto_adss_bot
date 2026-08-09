@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AdShare Super Admin</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0A0A0A;
+      --surface:   #141414;
+      --card:      #1a1a1a;
+      --border:    #242424;
+      --text:      #e8e8f0;
+      --muted:     #6b6b8a;
+      --accent:    #26A17B;
+      --accent2:   #1C7559;
+      --success:   #3DB87A;
+      --warning:   #f59e0b;
+      --error:     #ef4444;
+      --info:      #3b82f6;
+      --radius:    0px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .header h1 { color: var(--accent); font-size: 24px; margin-bottom: 8px; }
+    .header p { color: var(--muted); font-size: 14px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), #00b894); color: #000; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(38,161,123,0.3); }
+    .btn-danger { background: rgba(239,68,68,0.15); color: var(--error); border: 1px solid rgba(239,68,68,0.3); }
+    .btn-danger:hover { background: rgba(239,68,68,0.25); }
+
+    .hidden { display: none !important; }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      border-radius: var(--radius);
+      font-weight: 500;
+      font-size: 14px;
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: all 0.3s;
+      z-index: 1000;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.success { background: rgba(61,184,122,0.2); border: 1px solid var(--success); color: var(--success); }
+    #toast.error   { background: rgba(239,68,68,0.2);  border: 1px solid var(--error);   color: var(--error);   }
+  </style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<div class="container">
+  <div class="header">
+    <h1>👑 Super Admin</h1>
+    <p>Identity confirmed via Telegram WebApp HMAC</p>
+  </div>
+
+  <div id="loading" style="text-align: center; color: var(--muted); padding: 40px;">
+    Verifying identity...
+  </div>
+
+  <div id="access-denied" class="card hidden" style="border-color: var(--error); text-align: center;">
+    <h3 style="color: var(--error); margin-bottom: 12px;">Access Denied</h3>
+    <p style="color: var(--muted); font-size: 14px;">This page is restricted to the Super Admin identity.</p>
+  </div>
+
+  <div id="super-admin-content" class="hidden">
+    <div class="card" style="border-color: var(--accent2);">
+      <h3 style="color: var(--accent); margin-bottom: 8px;">2FA Settings</h3>
+      <p style="color: var(--muted); font-size: 13px; margin-bottom: 20px;">
+        Manage the Google Authenticator TOTP code required for regular admin panel logins.
+      </p>
+      
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button class="btn btn-primary" onclick="setup2FA()">Generate / Regenerate 2FA</button>
+        <button class="btn btn-danger" onclick="reset2FA()">Reset / Remove 2FA</button>
+      </div>
+
+      <div id="2fa-display" class="hidden" style="margin-top: 20px; padding: 20px; background: var(--bg); border: 1px solid var(--border);">
+        <div style="margin-bottom: 15px; font-weight: bold; color: var(--text);">Scan this QR Code with Google Authenticator:</div>
+        <img id="2fa-qr" src="" alt="2FA QR Code" style="background: white; padding: 10px; border-radius: 8px; margin-bottom: 20px; max-width: 100%;" />
+        
+        <div style="font-weight: bold; margin-bottom: 8px; color: var(--text);">Or enter this code manually:</div>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <code id="2fa-secret" data-raw="" style="font-size: 18px; background: var(--surface); padding: 10px 16px; border: 1px solid var(--border); color: var(--accent);"></code>
+          <button class="btn" style="background: var(--surface); border: 1px solid var(--border); color: var(--text);" onclick="copySecret()">Copy</button>
+        </div>
+        
+        <p style="font-size: 13px; color: var(--warning); margin-top: 20px; padding: 10px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2);">
+          ⚠ <b>WARNING:</b> This code will not be shown again. Please save it securely before leaving this page.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Auth Headers
+  const initData = window.Telegram?.WebApp?.initData || localStorage.getItem('tg_init_data') || '';
+  const tgId = localStorage.getItem('tg_id');
+  
+  const headers = {
+    'Content-Type': 'application/json',
+    'x-telegram-init-data': initData,
+    'x-telegram-id': tgId
+  };
+
+  function showToast(msg, type = 'success') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `show ${type}`;
+    setTimeout(() => { el.className = ''; }, 3500);
+  }
+
+  function copySecret() {
+    const secret = document.getElementById('2fa-secret').dataset.raw;
+    navigator.clipboard.writeText(secret).then(() => {
+      showToast('Copied to clipboard', 'success');
+    }).catch(() => {
+      showToast('Failed to copy', 'error');
+    });
+  }
+
+  async function api(path, options = {}) {
+    const res = await fetch(path, {
+      ...options,
+      headers: { ...headers, ...(options.headers || {}) }
+    });
+    
+    if (res.status === 401 || res.status === 403) {
+      throw new Error('Unauthorized');
+    }
+    
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  }
+
+  window.onload = async () => {
+    try {
+      // Hit a super_admin only endpoint to verify identity
+      // Instead of creating a new one, we can just call setup-2fa or check a status endpoint.
+      // Wait, calling setup-2fa regenerates it! We should NOT call setup-2fa just to verify.
+      // I will create a /api/admin/me endpoint in the backend for identity verification.
+      
+      const res = await api('/api/admin/superadmin-check');
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('super-admin-content').classList.remove('hidden');
+    } catch (e) {
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('access-denied').classList.remove('hidden');
+    }
+  };
+
+  async function setup2FA() {
+    try {
+      const data = await api('/api/admin/setup-2fa');
+      document.getElementById('2fa-qr').src = data.qrDataUrl;
+      const secretEl = document.getElementById('2fa-secret');
+      secretEl.dataset.raw = data.secret;
+      secretEl.textContent = data.secret.match(/.{1,4}/g).join(' ');
+      document.getElementById('2fa-display').classList.remove('hidden');
+      showToast('2FA Generated Successfully', 'success');
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
+  async function reset2FA() {
+    if (!confirm('Are you sure you want to remove 2FA for the admin account?')) return;
+    try {
+      await api('/api/admin/reset-2fa', { method: 'POST' });
+      document.getElementById('2fa-display').classList.add('hidden');
+      showToast('2FA Removed Successfully', 'success');
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+</script>
+</body>
+</html>

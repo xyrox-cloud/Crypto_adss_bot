@@ -19,6 +19,7 @@ import AdPolicy from './pages/AdPolicy';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import Leaderboard from './pages/Leaderboard';
+import Game from './pages/Game';
 
 function App() {
   const [initializing, setInitializing] = useState(true);
@@ -108,6 +109,7 @@ function App() {
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
+              <Route path="/game" element={<Game />} />
               <Route path="/admin/*" element={<AdminApp />} />
             </Routes>
           </div>

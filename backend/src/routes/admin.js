@@ -2,6 +2,8 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
+const speakeasy = require('speakeasy');
+const QRCode = require('qrcode');
 const { getDb, getSettings } = require('../db/database');
 const { requireAdmin } = require('../middleware/auth');
 const router = express.Router();
@@ -78,25 +80,29 @@ const loginLimiter = rateLimit({
 });
 
 router.post('/login', loginLimiter, (req, res) => {
-  const { password } = req.body;
-  const storedHash = process.env.ADMIN_PASSWORD;
+  const { totp } = req.body;
 
-  if (!password || !storedHash) {
-    return res.status(401).json({ error: 'Invalid credentials' });
+  // TOTP Verification
+  const settings = getSettings();
+  const totpSecret = settings['admin_totp_secret'];
+  
+  if (!totpSecret) {
+    return res.status(401).json({ error: '2FA not configured. Super Admin must set up 2FA first.' });
   }
 
-  // Support both plain-text (legacy dev) and bcrypt hashes
-  let valid = false;
-  if (storedHash.startsWith('$2')) {
-    // bcrypt hash
-    valid = bcrypt.compareSync(password, storedHash);
-  } else {
-    // plain text (dev only)
-    valid = password === storedHash;
+  if (!totp) {
+    return res.status(401).json({ error: '2FA Code required' });
   }
 
-  if (!valid) {
-    return res.status(401).json({ error: 'Invalid password' });
+  const tokenValid = speakeasy.totp.verify({
+    secret: totpSecret,
+    encoding: 'base32',
+    token: totp,
+    window: 1 // Allow 1 step (30s) before/after
+  });
+
+  if (!tokenValid) {
+    return res.status(401).json({ error: 'Invalid 2FA code' });
   }
 
   const token = jwt.sign(
@@ -106,6 +112,57 @@ router.post('/login', loginLimiter, (req, res) => {
   );
 
   res.json({ token });
+});
+
+// Helper to check super admin
+function requireSuperAdmin(req, res, next) {
+  if (req.admin && req.admin.role === 'super_admin') {
+    next();
+  } else {
+    res.status(403).json({ error: 'Forbidden: Super Admin only' });
+  }
+}
+
+// 2FA Setup
+router.get('/setup-2fa', requireAdmin, requireSuperAdmin, async (req, res) => {
+  try {
+    const secret = speakeasy.generateSecret({
+      name: 'AdShare Admin',
+    });
+    const db = getDb();
+    
+    // Save secret to database
+    db.prepare('INSERT OR REPLACE INTO settings (key, value, description) VALUES (?, ?, ?)').run(
+      'admin_totp_secret',
+      secret.base32,
+      'Google Authenticator TOTP Secret for Admin'
+    );
+    
+    const qrDataUrl = await QRCode.toDataURL(secret.otpauth_url);
+    
+    logAction(db, 'SETUP_2FA', 'Super Admin regenerated 2FA secret');
+    
+    res.json({
+      secret: secret.base32,
+      qrDataUrl
+    });
+  } catch (error) {
+    console.error('2FA setup error:', error);
+    res.status(500).json({ error: 'Failed to generate 2FA' });
+  }
+});
+
+// 2FA Reset
+router.post('/reset-2fa', requireAdmin, requireSuperAdmin, (req, res) => {
+  const db = getDb();
+  db.prepare('DELETE FROM settings WHERE key = ?').run('admin_totp_secret');
+  logAction(db, 'RESET_2FA', 'Super Admin removed 2FA secret');
+  res.json({ success: true });
+});
+
+// Superadmin verification
+router.get('/superadmin-check', requireAdmin, requireSuperAdmin, (req, res) => {
+  res.json({ ok: true, role: 'super_admin' });
 });
 
 /* ─────────────────────────────────────────────────────────────────

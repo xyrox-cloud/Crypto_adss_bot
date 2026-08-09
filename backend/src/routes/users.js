@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.post('/register', (req, res) => {
   try {
-    let { telegram_id, username, first_name, referral_code } = req.body;
+    let { telegram_id, username, first_name, photo_url, referral_code } = req.body;
     if (!telegram_id) {
       return res.status(400).json({ error: 'telegram_id is required' });
     }
@@ -28,16 +28,16 @@ router.post('/register', (req, res) => {
 
       const newRefCode = generateReferralCode();
       const insertUser = db.prepare(`
-        INSERT INTO users (telegram_id, username, first_name, referral_code, referred_by)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO users (telegram_id, username, first_name, photo_url, referral_code, referred_by)
+        VALUES (?, ?, ?, ?, ?, ?)
       `);
       
-      const info = insertUser.run(telegram_id, username, first_name, newRefCode, validReferral);
+      const info = insertUser.run(telegram_id, username, first_name, photo_url || null, newRefCode, validReferral);
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
     } else {
       // Update last_seen and other details if needed
-      db.prepare('UPDATE users SET username = ?, first_name = ?, last_seen = CURRENT_TIMESTAMP WHERE telegram_id = ?')
-        .run(username, first_name, telegram_id);
+      db.prepare('UPDATE users SET username = ?, first_name = ?, photo_url = ?, last_seen = CURRENT_TIMESTAMP WHERE telegram_id = ?')
+        .run(username, first_name, photo_url || null, telegram_id);
       user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(telegram_id);
     }
 
@@ -95,7 +95,7 @@ router.get('/leaderboard', extractTelegramUser, (req, res) => {
       // For today, we might need to count from ad_watches, but since we don't have a daily column in users,
       // we join and group.
       const rows = db.prepare(`
-        SELECT u.id, u.telegram_id, u.username, u.first_name, COUNT(a.id) as score
+        SELECT u.id, u.telegram_id, u.username, u.first_name, u.photo_url, COUNT(a.id) as score
         FROM users u
         JOIN ad_watches a ON u.id = a.user_id
         WHERE date(a.timestamp) = date('now')
@@ -108,7 +108,7 @@ router.get('/leaderboard', extractTelegramUser, (req, res) => {
     } else {
       // All time
       const rows = db.prepare(`
-        SELECT id, telegram_id, username, first_name, total_ads_watched as score
+        SELECT id, telegram_id, username, first_name, photo_url, total_ads_watched as score
         FROM users
         ORDER BY total_ads_watched DESC
         LIMIT 50

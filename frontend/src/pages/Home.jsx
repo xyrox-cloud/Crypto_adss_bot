@@ -13,7 +13,7 @@ const Home = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
 
-  const ENABLE_TASKS = false; // Flag to easily toggle the task/quest feature
+  const ENABLE_TASKS = true; // Flag to easily toggle the task/quest feature
 
   const [loadingAd, setLoadingAd] = useState(false);
   const [stats, setStats] = useState({ ads_today: 0, ads_this_week: 0, total_earned: 0 });

@@ -10,19 +10,19 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #0d0d1a;
-      --surface:   #141428;
-      --card:      #1a1a35;
-      --border:    rgba(255,255,255,0.08);
+      --bg:        #0A0A0A;
+      --surface:   #141414;
+      --card:      #1a1a1a;
+      --border:    #242424;
       --text:      #e8e8f0;
       --muted:     #6b6b8a;
-      --accent:    #00d4aa;
-      --accent2:   #7c3aed;
-      --success:   #10b981;
+      --accent:    #26A17B;
+      --accent2:   #1C7559;
+      --success:   #3DB87A;
       --warning:   #f59e0b;
       --error:     #ef4444;
       --info:      #3b82f6;
-      --radius:    12px;
+      --radius:    0px;
     }
 
     body {
@@ -68,6 +68,8 @@
       display: flex;
       flex-direction: column;
       padding: 24px 0;
+      transition: transform 0.3s ease;
+      z-index: 1000;
     }
     .sidebar-brand {
       padding: 0 20px 24px;
@@ -251,11 +253,52 @@
     .empty { color: var(--muted); font-size: 13px; padding: 40px; text-align: center; }
     .hidden { display: none !important; }
 
+    /* ─── Mobile Sidebar Overlay ─── */
+    .sidebar-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .sidebar-overlay.show { display: block; opacity: 1; }
+
+    .mobile-header {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 998;
+    }
+    .mobile-header h2 { font-size: 18px; color: var(--accent); margin: 0; }
+    .hamburger { background: none; border: none; color: var(--text); font-size: 24px; cursor: pointer; }
+
     /* ─── Responsive ─── */
     @media (max-width: 768px) {
-      .sidebar { width: 100%; height: auto; position: relative; flex-direction: row; flex-wrap: wrap; padding: 12px; }
-      .main-content { margin-left: 0; padding: 16px; }
+      .sidebar {
+        transform: translateX(-100%);
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      .main-content {
+        margin-left: 0;
+        padding: 16px;
+      }
+      .mobile-header {
+        display: flex;
+      }
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+      .page-header h1 { font-size: 20px; }
+      .table-wrapper { overflow-x: auto; }
+      .settings-grid { display: flex; flex-direction: column; }
     }
   </style>
 </head>
@@ -273,8 +316,8 @@
       <p>Revenue Sharing Platform Dashboard</p>
     </div>
     <div>
-      <label for="admin-password">Admin Password</label>
-      <input type="password" id="admin-password" placeholder="Enter admin password" />
+      <label for="admin-totp">2FA Code</label>
+      <input type="text" id="admin-totp" placeholder="6-digit code" />
       <p id="login-error" class="error-msg hidden"></p>
       <button class="btn btn-primary btn-full" onclick="doLogin()">🔐 Login</button>
     </div>
@@ -283,8 +326,15 @@
 
 <!-- ─── Admin App ─── -->
 <div id="admin-app">
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+  
+  <div class="mobile-header">
+    <h2>💰 AdShare Admin</h2>
+    <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  </div>
+
   <!-- Sidebar -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
       <h2>💰 AdShare Admin</h2>
       <p>Platform Dashboard</p>
@@ -444,7 +494,6 @@
           <div class="loading">Loading settings...</div>
         </div>
       </div>
-    </div>
 
   </main>
 </div>
@@ -452,17 +501,33 @@
 <script>
   /* ─── State ─── */
   let token = localStorage.getItem('admin_token') || null;
+  let inactivityTimer = null;
 
   /* ─── Init ─── */
   window.onload = () => {
     if (token) {
       showAdminApp();
+      resetInactivityTimer();
     }
     // Allow Enter key on login
-    document.getElementById('admin-password').addEventListener('keydown', e => {
+    document.getElementById('admin-totp').addEventListener('keydown', e => {
       if (e.key === 'Enter') doLogin();
     });
+
+    // Activity listeners for auto-logout
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    events.forEach(event => document.addEventListener(event, () => {
+      if (token) resetInactivityTimer();
+    }));
   };
+
+  function resetInactivityTimer() {
+    if (inactivityTimer) clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => {
+      doLogout();
+      showToast('Session expired due to inactivity', 'error');
+    }, 30 * 60 * 1000); // 30 minutes
+  }
 
   /* ─── Toast ─── */
   function showToast(msg, type = 'success') {
@@ -474,23 +539,26 @@
 
   /* ─── Auth ─── */
   async function doLogin() {
-    const password = document.getElementById('admin-password').value.trim();
+    const totp = document.getElementById('admin-totp').value.trim();
     const errEl = document.getElementById('login-error');
     errEl.classList.add('hidden');
 
-    if (!password) { errEl.textContent = 'Password is required'; errEl.classList.remove('hidden'); return; }
+    if (!totp) { errEl.textContent = '2FA Code is required'; errEl.classList.remove('hidden'); return; }
 
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password })
+        body: JSON.stringify({ totp })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Login failed');
+      if (!res.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
       token = data.token;
       localStorage.setItem('admin_token', token);
       showAdminApp();
+      resetInactivityTimer();
     } catch (err) {
       errEl.textContent = err.message;
       errEl.classList.remove('hidden');
@@ -500,9 +568,10 @@
   function doLogout() {
     token = null;
     localStorage.removeItem('admin_token');
+    if (inactivityTimer) clearTimeout(inactivityTimer);
     document.getElementById('admin-app').style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
-    document.getElementById('admin-password').value = '';
+    document.getElementById('admin-totp').value = '';
   }
 
   function showAdminApp() {
@@ -513,13 +582,17 @@
 
   /* ─── API helper ─── */
   async function api(path, options = {}) {
+    const tgId = localStorage.getItem('tg_id');
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...(options.headers || {})
+    };
+    if (tgId) headers['x-telegram-id'] = tgId;
+
     const res = await fetch(path, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        ...(options.headers || {})
-      }
+      headers
     });
     if (res.status === 401) { doLogout(); throw new Error('Session expired'); }
     const data = await res.json();
@@ -528,11 +601,31 @@
   }
 
   /* ─── Navigation ─── */
+  function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    sidebar.classList.toggle('open');
+    if (sidebar.classList.contains('open')) {
+      overlay.classList.add('show');
+    } else {
+      overlay.classList.remove('show');
+    }
+  }
+
   function showPage(name) {
     document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById(`page-${name}`).classList.remove('hidden');
     document.querySelector(`[data-page="${name}"]`).classList.add('active');
+    
+    // Close sidebar on mobile after clicking
+    if (window.innerWidth <= 768) {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      sidebar.classList.remove('open');
+      overlay.classList.remove('show');
+    }
+
     // Load data for the page
     if (name === 'dashboard') loadDashboard();
     if (name === 'withdrawals') loadWithdrawals();

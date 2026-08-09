@@ -23,6 +23,7 @@ function initDb() {
       telegram_id TEXT UNIQUE NOT NULL,
       username TEXT,
       first_name TEXT,
+      photo_url TEXT,
       balance REAL DEFAULT 0.0,
       total_earned REAL DEFAULT 0.0,
       total_ads_watched INTEGER DEFAULT 0,

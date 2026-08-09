@@ -56,6 +56,11 @@ app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
 });
 
+// Redirect /superadmin to the superadmin panel HTML
+app.get('/superadmin', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'superadmin.html'));
+});
+
 // API Routes
 app.use('/api/users', usersRouter);
 app.use('/api/ads', adsRouter);
