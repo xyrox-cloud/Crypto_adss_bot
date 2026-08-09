@@ -302,6 +302,9 @@
       <div class="nav-item" data-page="ad-watches" onclick="showPage('ad-watches')">
         <span class="icon">📺</span> Ad Watches
       </div>
+      <div class="nav-item" data-page="settings" onclick="showPage('settings')">
+        <span class="icon">⚙️</span> Settings
+      </div>
     </nav>
     <div class="sidebar-logout">
       <button class="btn btn-danger btn-full" onclick="doLogout()">🚪 Logout</button>
@@ -427,6 +430,22 @@
       </div>
     </div>
 
+    <!-- ─── Settings Page ─── -->
+    <div id="page-settings" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h1>Platform Settings</h1>
+          <p>Update reward values, splits, and limits</p>
+        </div>
+        <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
+      </div>
+      <div class="card" style="max-width: 600px;">
+        <div id="settings-form-wrapper">
+          <div class="loading">Loading settings...</div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -462,7 +481,7 @@
     if (!password) { errEl.textContent = 'Password is required'; errEl.classList.remove('hidden'); return; }
 
     try {
-      const res = await fetch('/admin/login', {
+      const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
@@ -519,6 +538,7 @@
     if (name === 'withdrawals') loadWithdrawals();
     if (name === 'users') loadUsers();
     if (name === 'ad-watches') loadAdWatches();
+    if (name === 'settings') loadSettings();
   }
 
   /* ─── Helpers ─── */
@@ -545,7 +565,7 @@
     const grid = document.getElementById('stats-grid');
     grid.innerHTML = '<div class="loading">Loading stats...</div>';
     try {
-      const stats = await api('/admin/stats');
+      const stats = await api('/api/admin/stats');
       grid.innerHTML = `
         <div class="stat-card">
           <div class="stat-icon">👥</div>
@@ -589,12 +609,11 @@
   }
 
   /* ─── Withdrawals ─── */
-  async function loadWithdrawals() {
+  async function loadWithdrawals(filter = '') {
     const tbody = document.getElementById('withdrawals-table-body');
-    const filter = document.getElementById('withdrawal-filter').value;
-    tbody.innerHTML = '<tr><td colspan="7" class="loading">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">Loading...</td></tr>';
     try {
-      const { withdrawals } = await api(`/admin/withdrawals${filter ? `?status=${filter}` : ''}`);
+      const { withdrawals } = await api(`/api/admin/withdrawals${filter ? `?status=${filter}` : ''}`);
       if (!withdrawals.length) {
         tbody.innerHTML = '<tr><td colspan="7" class="empty">No withdrawal requests found.</td></tr>';
         return;
@@ -638,7 +657,7 @@
     }
 
     try {
-      await api(`/admin/withdrawals/${id}`, {
+      await api(`/api/admin/withdrawals/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ status, admin_note: note })
       });
@@ -655,7 +674,7 @@
     const tbody = document.getElementById('users-table-body');
     tbody.innerHTML = '<tr><td colspan="7" class="loading">Loading...</td></tr>';
     try {
-      const { users } = await api('/admin/users');
+      const { users } = await api('/api/admin/users');
       if (!users.length) {
         tbody.innerHTML = '<tr><td colspan="7" class="empty">No users found.</td></tr>';
         return;
@@ -681,7 +700,7 @@
     const tbody = document.getElementById('watches-table-body');
     tbody.innerHTML = '<tr><td colspan="7" class="loading">Loading...</td></tr>';
     try {
-      const { watches } = await api('/admin/ad-watches?limit=100');
+      const { watches } = await api('/api/admin/ad-watches?limit=100');
       if (!watches.length) {
         tbody.innerHTML = '<tr><td colspan="7" class="empty">No ad watches recorded yet.</td></tr>';
         return;
@@ -715,6 +734,50 @@
         document.body.removeChild(ta);
         showToast('Copied!');
       });
+  }
+
+  /* ─── Settings ─── */
+  async function loadSettings() {
+    const wrapper = document.getElementById('settings-form-wrapper');
+    wrapper.innerHTML = '<div class="loading">Loading settings...</div>';
+    try {
+      const { settings } = await api('/api/admin/settings');
+      let html = '';
+      settings.forEach(s => {
+        if (['reward_per_ad', 'platform_cut_pct', 'max_ads_per_day', 'max_ads_per_hour', 'min_withdrawal', 'ad_cooldown_secs'].includes(s.key)) {
+          html += `
+            <div style="margin-bottom:15px;">
+              <label for="setting-${s.key}">${s.key} <span class="text-muted" style="font-size:11px;font-weight:normal;">- ${s.description || ''}</span></label>
+              <input type="text" id="setting-${s.key}" data-key="${s.key}" value="${s.value}" />
+            </div>
+          `;
+        }
+      });
+      wrapper.innerHTML = html;
+    } catch (err) {
+      console.error(err);
+      wrapper.innerHTML = '<div class="error-msg">Failed to load settings</div>';
+    }
+  }
+
+  async function saveSettings() {
+    const inputs = document.querySelectorAll('#settings-form-wrapper input');
+    const settings = [];
+    inputs.forEach(input => {
+      settings.push({ key: input.dataset.key, value: input.value });
+    });
+
+    try {
+      await api('/api/admin/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ settings })
+      });
+      showToast('Settings saved successfully', 'success');
+      loadSettings();
+    } catch (err) {
+      console.error(err);
+      showToast(err.message, 'error');
+    }
   }
 </script>
 </body>

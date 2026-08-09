@@ -429,7 +429,7 @@ router.put('/settings', requireAdmin, (req, res) => {
       return res.status(400).json({ error: 'settings must be a non-empty array' });
     }
 
-    const allowed = ['reward_per_ad', 'platform_cut_pct', 'max_ads_per_day', 'min_withdrawal', 'ad_cooldown_secs'];
+    const allowed = ['reward_per_ad', 'platform_cut_pct', 'max_ads_per_day', 'max_ads_per_hour', 'min_withdrawal', 'ad_cooldown_secs'];
     const updated = [];
 
     const upsert = db.prepare(`

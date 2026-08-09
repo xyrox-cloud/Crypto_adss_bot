@@ -123,6 +123,7 @@ function initDb() {
     seedSettings.run('platform_cut_pct',   '40',                                     'Platform keeps this % of each ad reward');
     seedSettings.run('revenue_split',      '60',                                     'User % cut of the ad reward');
     seedSettings.run('max_ads_per_day',    process.env.MAX_ADS_PER_DAY  || '20',    'Max ads a user can watch per calendar day');
+    seedSettings.run('max_ads_per_hour',   process.env.MAX_ADS_PER_HOUR || '5',     'Max ads a user can watch per hour');
     seedSettings.run('min_withdrawal',     process.env.MIN_WITHDRAWAL   || '2.00',  'Minimum USDT amount for a withdrawal request');
     seedSettings.run('ad_cooldown_secs',   '30',                                     'Seconds a user must wait between ad watches');
   });

@@ -58,6 +58,17 @@ router.get('/reward', rewardLimiter, (req, res) => {
       return res.status(429).json({ error: `Daily ad limit reached (${maxAdsPerDay}/day)` });
     }
 
+    // Hourly limit check
+    const maxAdsPerHour = Math.floor(settings.max_ads_per_hour ?? 5);
+    const hourCount = db.prepare(`
+      SELECT COUNT(*) as count FROM ad_watches
+      WHERE user_id = ? AND timestamp >= datetime('now', '-1 hour')
+    `).get(user.id).count;
+
+    if (hourCount >= maxAdsPerHour) {
+      return res.status(429).json({ error: `Hourly ad limit reached (${maxAdsPerHour}/hour)` });
+    }
+
     // Cooldown check (similar to hourly/rate limit)
     if (cooldownSecs > 0) {
       const lastWatch = db.prepare(`
