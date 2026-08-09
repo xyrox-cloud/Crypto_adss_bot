@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { useToast } from '../context/ToastContext';
-import { getAdStats } from '../api/api';
+import { getAdStats, submitQuestClaim } from '../api/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SpinWheel from '../components/SpinWheel';
 import ScratchCard from '../components/ScratchCard';
@@ -23,6 +23,7 @@ const Home = () => {
   const [showSpinWheel, setShowSpinWheel] = useState(false);
   const [showScratchCard, setShowScratchCard] = useState(false);
   const [stats, setStats] = useState({ ads_today: 0, ads_this_week: 0, total_earned: 0 });
+  const [claimingQuest, setClaimingQuest] = useState(null); // 'rounds'|'score'|'grinder'|null
 
   useEffect(() => { fetchStats(); }, []);
 
@@ -108,10 +109,30 @@ const Home = () => {
   const currentDay = new Date().getDay() - 1; // 0 for Mon
   const normalizedDay = currentDay < 0 ? 6 : currentDay;
 
-  // Dynamic quest stats pulled from user data (fallback to 0 if not present)
-  const blitzRounds = user?.blitz_rounds || 0;
+  // Dynamic quest stats — use blitz_rounds_today (resets daily) for Quest 1
+  const blitzRoundsToday = user?.blitz_rounds_today || 0;
+  const blitzRounds = user?.blitz_rounds || 0; // lifetime (for the Home card display)
   const topScore = user?.top_score || 0;
   const totalScore = user?.total_score_today || 0;
+  // Claimed flags
+  const q1Claimed = !!user?.quest_rounds_claimed;
+  const q2Claimed = !!user?.quest_score_claimed;
+  const q3Claimed = !!user?.quest_grinder_claimed;
+
+  const handleQuestClaim = async (questKey) => {
+    if (claimingQuest) return;
+    setClaimingQuest(questKey);
+    try {
+      const res = await submitQuestClaim(questKey);
+      showToast(`Quest complete! +${res.data.reward} Credits`, 'success');
+      await refreshUser();
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Failed to claim quest';
+      showToast(msg, 'error');
+    } finally {
+      setClaimingQuest(null);
+    }
+  };
 
   return (
     <div className="pb-24 px-4 pt-4">
@@ -352,65 +373,111 @@ const Home = () => {
         </div>
 
         <div className="space-y-3">
-          {/* Quest 1 */}
-          <div className="bg-cardbg border border-cardborder rounded-2xl p-4">
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <div className="font-bold text-sm text-white">Warm up</div>
-                <div className="text-[11px] text-textmuted">Finish 3 Blitz rounds</div>
+          {/* Quest 1 — Warm up: 3 rounds today */}
+          {(() => {
+            const progress = Math.min(blitzRoundsToday, 3);
+            const complete = progress >= 3;
+            return (
+              <div className={`bg-cardbg border rounded-2xl p-4 transition-colors ${complete && !q1Claimed ? 'border-secondary/50' : 'border-cardborder'}`}>
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <div className="font-bold text-sm text-white">Warm up</div>
+                    <div className="text-[11px] text-textmuted">Finish 3 Blitz rounds</div>
+                  </div>
+                  {q1Claimed ? (
+                    <div className="bg-success/20 text-success border border-success/30 px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1">✓ CLAIMED</div>
+                  ) : complete ? (
+                    <button
+                      onClick={() => handleQuestClaim('rounds')}
+                      disabled={claimingQuest === 'rounds'}
+                      className="bg-secondary text-black px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wide disabled:opacity-60 active:scale-95 transition-transform"
+                    >
+                      {claimingQuest === 'rounds' ? '...' : 'CLAIM +120'}
+                    </button>
+                  ) : (
+                    <div className="border border-secondary text-secondary px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1"><Target size={12} /> 120</div>
+                  )}
+                </div>
+                <div className="flex justify-between items-end mb-1 mt-2">
+                  <div className="text-[10px] font-mono text-textmuted">PROGRESS</div>
+                  <div className="text-xs font-mono font-bold">{progress} / 3</div>
+                </div>
+                <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
+                  <div className="h-full bg-secondary rounded-full transition-all" style={{ width: `${Math.min((blitzRoundsToday/3)*100, 100)}%` }}></div>
+                </div>
               </div>
-              <div className="border border-secondary text-secondary px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1">
-                <Target size={12} /> 120
-              </div>
-            </div>
-            <div className="flex justify-between items-end mb-1 mt-2">
-              <div className="text-[10px] font-mono text-textmuted">PROGRESS</div>
-              <div className="text-xs font-mono font-bold">{Math.min(blitzRounds, 3)} / 3</div>
-            </div>
-            <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
-              <div className="h-full bg-secondary rounded-full" style={{ width: `${Math.min((blitzRounds/3)*100, 100)}%` }}></div>
-            </div>
-          </div>
+            );
+          })()}
 
-          {/* Quest 2 */}
-          <div className="bg-cardbg border border-cardborder rounded-2xl p-4">
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <div className="font-bold text-sm text-white">Sharp eyes</div>
-                <div className="text-[11px] text-textmuted">Score 400 in a single round</div>
+          {/* Quest 2 — Sharp eyes: score 400 in one round */}
+          {(() => {
+            const complete = topScore >= 400;
+            return (
+              <div className={`bg-cardbg border rounded-2xl p-4 transition-colors ${complete && !q2Claimed ? 'border-secondary/50' : 'border-cardborder'}`}>
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <div className="font-bold text-sm text-white">Sharp eyes</div>
+                    <div className="text-[11px] text-textmuted">Score 400 in a single round</div>
+                  </div>
+                  {q2Claimed ? (
+                    <div className="bg-success/20 text-success border border-success/30 px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1">✓ CLAIMED</div>
+                  ) : complete ? (
+                    <button
+                      onClick={() => handleQuestClaim('score')}
+                      disabled={claimingQuest === 'score'}
+                      className="bg-secondary text-black px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wide disabled:opacity-60 active:scale-95 transition-transform"
+                    >
+                      {claimingQuest === 'score' ? '...' : 'CLAIM +200'}
+                    </button>
+                  ) : (
+                    <div className="border border-secondary text-secondary px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1"><Target size={12} /> 200</div>
+                  )}
+                </div>
+                <div className="flex justify-between items-end mb-1 mt-2">
+                  <div className="text-[10px] font-mono text-textmuted">PROGRESS</div>
+                  <div className="text-xs font-mono font-bold">{Math.min(topScore, 400)} / 400</div>
+                </div>
+                <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
+                  <div className="h-full bg-secondary rounded-full transition-all" style={{ width: `${Math.min((topScore/400)*100, 100)}%` }}></div>
+                </div>
               </div>
-              <div className="border border-secondary text-secondary px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1">
-                <Target size={12} /> 200
-              </div>
-            </div>
-            <div className="flex justify-between items-end mb-1 mt-2">
-              <div className="text-[10px] font-mono text-textmuted">PROGRESS</div>
-              <div className="text-xs font-mono font-bold">{Math.min(topScore, 400)} / 400</div>
-            </div>
-            <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
-              <div className="h-full bg-secondary rounded-full" style={{ width: `${Math.min((topScore/400)*100, 100)}%` }}></div>
-            </div>
-          </div>
+            );
+          })()}
 
-          {/* Quest 3 */}
-          <div className="bg-cardbg border border-cardborder rounded-2xl p-4">
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <div className="font-bold text-sm text-white">Grinder</div>
-                <div className="text-[11px] text-textmuted">Score 1,200 points total today</div>
+          {/* Quest 3 — Grinder: 1200 total score today */}
+          {(() => {
+            const complete = totalScore >= 1200;
+            return (
+              <div className={`bg-cardbg border rounded-2xl p-4 transition-colors ${complete && !q3Claimed ? 'border-secondary/50' : 'border-cardborder'}`}>
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <div className="font-bold text-sm text-white">Grinder</div>
+                    <div className="text-[11px] text-textmuted">Score 1,200 points total today</div>
+                  </div>
+                  {q3Claimed ? (
+                    <div className="bg-success/20 text-success border border-success/30 px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1">✓ CLAIMED</div>
+                  ) : complete ? (
+                    <button
+                      onClick={() => handleQuestClaim('grinder')}
+                      disabled={claimingQuest === 'grinder'}
+                      className="bg-secondary text-black px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wide disabled:opacity-60 active:scale-95 transition-transform"
+                    >
+                      {claimingQuest === 'grinder' ? '...' : 'CLAIM +260'}
+                    </button>
+                  ) : (
+                    <div className="border border-secondary text-secondary px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1"><Target size={12} /> 260</div>
+                  )}
+                </div>
+                <div className="flex justify-between items-end mb-1 mt-2">
+                  <div className="text-[10px] font-mono text-textmuted">PROGRESS</div>
+                  <div className="text-xs font-mono font-bold">{Math.min(totalScore, 1200)} / 1200</div>
+                </div>
+                <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
+                  <div className="h-full bg-secondary rounded-full transition-all" style={{ width: `${Math.min((totalScore/1200)*100, 100)}%` }}></div>
+                </div>
               </div>
-              <div className="border border-secondary text-secondary px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1">
-                <Target size={12} /> 260
-              </div>
-            </div>
-            <div className="flex justify-between items-end mb-1 mt-2">
-              <div className="text-[10px] font-mono text-textmuted">PROGRESS</div>
-              <div className="text-xs font-mono font-bold">{Math.min(totalScore, 1200)} / 1200</div>
-            </div>
-            <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
-              <div className="h-full bg-secondary rounded-full" style={{ width: `${Math.min((totalScore/1200)*100, 100)}%` }}></div>
-            </div>
-          </div>
+            );
+          })()}
         </div>
       </div>
 

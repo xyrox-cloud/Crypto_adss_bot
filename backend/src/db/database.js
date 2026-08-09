@@ -134,6 +134,17 @@ function initDb() {
     db.exec('ALTER TABLE users ADD COLUMN referral_bonus_paid INTEGER DEFAULT 0');
   if (!userCols.includes('last_scratch_claim'))
     db.exec('ALTER TABLE users ADD COLUMN last_scratch_claim DATETIME');
+  // Daily quest tracking columns
+  if (!userCols.includes('blitz_rounds_today'))
+    db.exec('ALTER TABLE users ADD COLUMN blitz_rounds_today INTEGER DEFAULT 0');
+  if (!userCols.includes('quest_rounds_claimed'))
+    db.exec('ALTER TABLE users ADD COLUMN quest_rounds_claimed INTEGER DEFAULT 0');
+  if (!userCols.includes('quest_score_claimed'))
+    db.exec('ALTER TABLE users ADD COLUMN quest_score_claimed INTEGER DEFAULT 0');
+  if (!userCols.includes('quest_grinder_claimed'))
+    db.exec('ALTER TABLE users ADD COLUMN quest_grinder_claimed INTEGER DEFAULT 0');
+  if (!userCols.includes('quests_last_reset'))
+    db.exec("ALTER TABLE users ADD COLUMN quests_last_reset TEXT DEFAULT ''");
 
   // Add new columns to existing ad_watches table if they don't exist (migration)
   const adWatchCols = db.pragma('table_info(ad_watches)').map(c => c.name);

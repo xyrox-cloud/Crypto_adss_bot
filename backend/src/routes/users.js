@@ -2,6 +2,7 @@ const express = require('express');
 const { getDb, generateReferralCode, processReferralBonus, getSettings } = require('../db/database');
 const { extractTelegramUser } = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
+const cron = require('node-cron');
 const router = express.Router();
 
 router.post('/register', (req, res) => {
@@ -58,8 +59,14 @@ router.post('/register', (req, res) => {
 router.get('/me', extractTelegramUser, (req, res) => {
   try {
     const db = getDb();
-    const user = db.prepare('SELECT balance, total_earned, referral_code, created_at, first_name, username, blitz_rounds, top_score, total_score_today, all_time_score, last_daily_claim, daily_streak, last_minigame_claim FROM users WHERE telegram_id = ?')
-                   .get(req.telegramUser.id);
+    const user = db.prepare(`
+      SELECT balance, total_earned, referral_code, created_at, first_name, username,
+             blitz_rounds, blitz_rounds_today, top_score, total_score_today, all_time_score,
+             last_daily_claim, daily_streak, last_minigame_claim,
+             quest_rounds_claimed, quest_score_claimed, quest_grinder_claimed, referral_count
+      FROM users WHERE telegram_id = ?
+    `).get(req.telegramUser.id);
+
     
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -122,6 +129,7 @@ router.post('/game-reward', extractTelegramUser, gameRewardLimiter, (req, res) =
     db.prepare(`
       UPDATE users 
       SET blitz_rounds = blitz_rounds + 1,
+          blitz_rounds_today = blitz_rounds_today + 1,
           top_score = CASE WHEN ? > top_score THEN ? ELSE top_score END,
           total_score_today = total_score_today + ?,
           all_time_score = all_time_score + ?,
@@ -495,4 +503,92 @@ router.post('/scratch-claim', extractTelegramUser, (req, res) => {
   }
 });
 
+/* ─────────────────────────────────────────────────────────────────
+   POST /api/users/quest-claim
+   Body: { quest: 'rounds' | 'score' | 'grinder' }
+   Credits reward as all_time_score (Credits, no monetary value)
+───────────────────────────────────────────────────────────────── */
+const questClaimLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { error: 'Too many claim requests' }
+});
+
+const QUESTS = {
+  rounds:  { claimCol: 'quest_rounds_claimed',  checkFn: (u) => (u.blitz_rounds_today || 0) >= 3,   reward: 120 },
+  score:   { claimCol: 'quest_score_claimed',   checkFn: (u) => (u.top_score || 0) >= 400,           reward: 200 },
+  grinder: { claimCol: 'quest_grinder_claimed', checkFn: (u) => (u.total_score_today || 0) >= 1200,  reward: 260 },
+};
+
+router.post('/quest-claim', extractTelegramUser, questClaimLimiter, (req, res) => {
+  try {
+    const { quest } = req.body;
+    if (!quest || !QUESTS[quest]) return res.status(400).json({ error: 'Invalid quest' });
+
+    const db = getDb();
+    const user = db.prepare('SELECT * FROM users WHERE telegram_id = ? AND banned = 0').get(req.telegramUser.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const { claimCol, checkFn, reward } = QUESTS[quest];
+
+    // Already claimed today?
+    if (user[claimCol]) return res.status(409).json({ error: 'Quest already claimed today' });
+
+    // Progress met?
+    if (!checkFn(user)) return res.status(400).json({ error: 'Quest not yet completed' });
+
+    // Credit reward (all_time_score = Credits, no monetary value per ToS)
+    db.prepare(`
+      UPDATE users
+      SET ${claimCol} = 1,
+          all_time_score = all_time_score + ?,
+          last_seen = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(reward, user.id);
+
+    db.prepare('INSERT INTO activity_log (action, details) VALUES (?, ?)').run(
+      'quest_claimed',
+      `User ${req.telegramUser.id} claimed quest '${quest}' for ${reward} credits`
+    );
+
+    res.json({ success: true, reward });
+  } catch (err) {
+    console.error('[Quest Claim Error]', err);
+    res.status(500).json({ error: 'Failed to claim quest' });
+  }
+});
+
+/* ─────────────────────────────────────────────────────────────────
+   DAILY QUEST RESET — runs every day at exactly 00:00 UTC
+   Resets: blitz_rounds_today, total_score_today, and all 3 claim
+   flags. Does NOT reset top_score (all-time personal best) or
+   blitz_rounds (lifetime counter) or any Credits already awarded.
+───────────────────────────────────────────────────────────────── */
+cron.schedule('0 0 * * *', () => {
+  try {
+    const db = getDb();
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD UTC
+
+    const result = db.prepare(`
+      UPDATE users
+      SET blitz_rounds_today   = 0,
+          total_score_today    = 0,
+          quest_rounds_claimed = 0,
+          quest_score_claimed  = 0,
+          quest_grinder_claimed = 0,
+          quests_last_reset    = ?
+      WHERE quests_last_reset != ? OR quests_last_reset IS NULL OR quests_last_reset = ''
+    `).run(today, today);
+
+    console.log(`[Quest Reset] Daily reset at 00:00 UTC — ${result.changes} users updated`);
+    db.prepare('INSERT INTO activity_log (action, details) VALUES (?, ?)').run(
+      'daily_quest_reset',
+      `Daily quest reset at ${new Date().toISOString()} — ${result.changes} users`
+    );
+  } catch (err) {
+    console.error('[Quest Reset Error]', err);
+  }
+}, { timezone: 'UTC' });
+
 module.exports = router;
+
