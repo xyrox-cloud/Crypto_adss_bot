@@ -67,6 +67,48 @@ function logAction(db, action, details) {
 }
 
 /* ─────────────────────────────────────────────────────────────────
+   POST /api/admin/login
+───────────────────────────────────────────────────────────────── */
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // limit each IP to 10 login requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts, please try again later.' }
+});
+
+router.post('/login', loginLimiter, (req, res) => {
+  const { password } = req.body;
+  const storedHash = process.env.ADMIN_PASSWORD;
+
+  if (!password || !storedHash) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
+  // Support both plain-text (legacy dev) and bcrypt hashes
+  let valid = false;
+  if (storedHash.startsWith('$2')) {
+    // bcrypt hash
+    valid = bcrypt.compareSync(password, storedHash);
+  } else {
+    // plain text (dev only)
+    valid = password === storedHash;
+  }
+
+  if (!valid) {
+    return res.status(401).json({ error: 'Invalid password' });
+  }
+
+  const token = jwt.sign(
+    { role: 'admin', iat: Date.now() },
+    process.env.ADMIN_JWT_SECRET,
+    { expiresIn: '30m' }  // 30-min inactivity — client renews on each action
+  );
+
+  res.json({ token });
+});
+
+/* ─────────────────────────────────────────────────────────────────
    POST /api/admin/refresh  — sliding session renewal (Deprecated)
 ───────────────────────────────────────────────────────────────── */
 router.post('/refresh', requireAdmin, (req, res) => {
