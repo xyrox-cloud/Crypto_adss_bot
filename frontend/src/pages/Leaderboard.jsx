@@ -57,8 +57,12 @@ const Leaderboard = () => {
       {/* MY POSITION */}
       <div className="bg-secondary rounded-3xl p-4 flex items-center justify-between mb-6 shadow-[0_0_15px_rgba(255,90,31,0.2)]">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center font-bold text-lg text-white border-2 border-white/40">
-            {user?.first_name?.charAt(0) || <User size={20} />}
+          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center font-bold text-lg text-white border-2 border-white/40 overflow-hidden">
+            {window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url ? (
+              <img src={window.Telegram.WebApp.initDataUnsafe.user.photo_url} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              user?.first_name?.charAt(0) || <User size={20} />
+            )}
           </div>
           <div>
             <div className="text-[10px] font-bold text-black/60 bg-black/10 px-2 py-0.5 rounded-full inline-block mb-1">
@@ -88,8 +92,12 @@ const Leaderboard = () => {
                  idx === 2 ? <Medal size={24} className="text-[#CD7F32] mx-auto" /> : 
                  `#${idx + 1}`}
               </div>
-              <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center font-bold text-white mr-3 flex-shrink-0">
-                {(l.first_name || l.username || 'A').charAt(0).toUpperCase()}
+              <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center font-bold text-white mr-3 flex-shrink-0 overflow-hidden">
+                {l.photo_url ? (
+                  <img src={l.photo_url} alt={l.first_name || l.username} className="w-full h-full object-cover" />
+                ) : (
+                  (l.first_name || l.username || 'A').charAt(0).toUpperCase()
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-bold text-white uppercase truncate">{l.first_name || l.username || 'Anonymous'}</div>

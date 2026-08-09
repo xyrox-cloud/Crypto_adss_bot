@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getAdminSettings, saveAdminSettings } from '../../api/adminApi';
+import { getAdminSettings, saveAdminSettings, setup2FA, reset2FA } from '../../api/adminApi';
 import { useAdminToast } from '../AdminToast';
 import ConfirmModal from '../ConfirmModal';
 
@@ -49,6 +49,30 @@ export default function AdminSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [twoFaData, setTwoFaData] = useState(null);
+  
+  const isSuperAdmin = import.meta.env.VITE_SUPER_ADMIN_ID && localStorage.getItem('tg_id') === import.meta.env.VITE_SUPER_ADMIN_ID;
+
+  const handleSetup2FA = async () => {
+    try {
+      const res = await setup2FA();
+      setTwoFaData(res.data);
+      toast('2FA Generated Successfully. Please scan the QR code.', 'success');
+    } catch (e) {
+      toast('Failed to generate 2FA', 'error');
+    }
+  };
+
+  const handleReset2FA = async () => {
+    if (!window.confirm('Are you sure you want to remove 2FA for the admin account?')) return;
+    try {
+      await reset2FA();
+      setTwoFaData(null);
+      toast('2FA Removed Successfully', 'success');
+    } catch (e) {
+      toast('Failed to remove 2FA', 'error');
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -209,6 +233,41 @@ export default function AdminSettings() {
       {isDirty && (
         <div style={{ background: 'rgba(212,148,58,0.08)', border: '1px solid rgba(212,148,58,0.25)', borderRadius: 'var(--r-md)', padding: '12px 16px', fontSize: 13, color: 'var(--warning)', marginTop: 4 }}>
           ⚠ You have unsaved changes. Click "Save Changes" to apply them.
+        </div>
+      )}
+
+      {isSuperAdmin && (
+        <div className="settings-card" style={{ marginTop: 24, borderColor: 'var(--accent-dim)' }}>
+          <div className="settings-card-title" style={{ color: 'var(--accent)' }}>Super Admin: 2FA Settings</div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 15 }}>
+            Generate a Google Authenticator TOTP code for regular admin logins.
+          </p>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="a-btn a-btn-primary" onClick={handleSetup2FA}>Generate / Regenerate 2FA</button>
+            <button className="a-btn" style={{ background: 'var(--error-sub)', color: 'var(--error)', border: '1px solid var(--error)' }} onClick={handleReset2FA}>Reset / Remove 2FA</button>
+          </div>
+          {twoFaData && (
+            <div style={{ marginTop: 20, padding: 15, background: 'var(--bg-base)', border: '1px solid var(--border)' }}>
+              <div style={{ marginBottom: 15, fontWeight: 'bold' }}>Scan this QR Code with Google Authenticator:</div>
+              <img src={twoFaData.qrDataUrl} alt="2FA QR Code" style={{ background: 'white', padding: 10, borderRadius: 8, marginBottom: 15 }} />
+              
+              <div style={{ fontWeight: 'bold', marginBottom: 5 }}>Or enter this code manually:</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <code style={{ fontSize: 16, background: '#141414', padding: '8px 12px', border: '1px solid #242424', color: 'var(--accent)' }}>
+                  {twoFaData.secret.match(/.{1,4}/g).join(' ')}
+                </code>
+                <button 
+                  onClick={() => { navigator.clipboard.writeText(twoFaData.secret); toast('Copied to clipboard', 'success'); }}
+                  style={{ padding: '6px 12px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: '#fff', cursor: 'pointer' }}
+                >
+                  Copy
+                </button>
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--warning)', marginTop: 15 }}>
+                WARNING: This code will not be shown again. Please save it securely before leaving this page.
+              </p>
+            </div>
+          )}
         </div>
       )}
 

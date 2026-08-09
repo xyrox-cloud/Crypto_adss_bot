@@ -65,8 +65,10 @@ export function getAdminToken() {
 }
 
 // Auth
-export const adminLogin   = (password) => adminApi.post('login', { password });
+export const adminLogin   = (password, totp) => adminApi.post('login', { password, totp });
 export const adminRefresh = () => adminApi.post('refresh');
+export const setup2FA     = () => adminApi.get('setup-2fa');
+export const reset2FA     = () => adminApi.post('reset-2fa');
 
 // Dashboard
 export const getAdminStats = () => adminApi.get('stats');

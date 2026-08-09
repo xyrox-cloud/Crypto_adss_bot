@@ -5,14 +5,14 @@
 
 /* Admin CSS variables (extend main design system) */
 .admin-root {
-  --bg-base:       #0A0E17;
-  --bg-surface:    #121826;
-  --bg-elevated:   #1A2233;
-  --bg-sidebar:    #0D1421;
-  --accent:        #5C89C7;
-  --accent-dim:    #3E5F8A;
-  --accent-glow:   rgba(92, 137, 199, 0.25);
-  --accent-subtle: rgba(92, 137, 199, 0.10);
+  --bg-base:       #0A0A0A;
+  --bg-surface:    #141414;
+  --bg-elevated:   #1A1A1A;
+  --bg-sidebar:    #0A0A0A;
+  --accent:        #26A17B;
+  --accent-dim:    #1C7559;
+  --accent-glow:   rgba(38, 161, 123, 0.25);
+  --accent-subtle: rgba(38, 161, 123, 0.10);
   --gold:          #C9A055;
   --gold-dim:      #A07B38;
   --gold-subtle:   rgba(201, 160, 85, 0.10);
@@ -25,10 +25,10 @@
   --warning-sub:   rgba(212,148,58,0.12);
   --error:         #E05252;
   --error-sub:     rgba(224,82,82,0.12);
-  --border:        #232C3F;
-  --r-sm:          8px;
-  --r-md:          12px;
-  --r-lg:          16px;
+  --border:        #242424;
+  --r-sm:          0px;
+  --r-md:          0px;
+  --r-lg:          0px;
   --sidebar-w:     220px;
   --font-head:     'Sora', sans-serif;
   --font-body:     'Inter', sans-serif;

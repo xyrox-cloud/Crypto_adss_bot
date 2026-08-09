@@ -59,6 +59,7 @@ function App() {
             telegram_id: tgUser.id,
             username: tgUser.username,
             first_name: tgUser.first_name,
+            photo_url: tgUser.photo_url,
           }),
           getChannelStatus().catch(() => ({ data: { required: false, isMember: true } }))
         ]);

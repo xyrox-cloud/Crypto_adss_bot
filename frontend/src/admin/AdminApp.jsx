@@ -8,6 +8,8 @@ import AdminUsers from './pages/AdminUsers';
 import AdminSettings from './pages/AdminSettings';
 import AdminActivityLog from './pages/AdminActivityLog';
 import AdminSupport from './pages/AdminSupport';
+import AdminLogin from './pages/AdminLogin';
+import { getAdminToken, clearAdminSession } from '../api/adminApi';
 
 export default function AdminApp() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -18,28 +20,51 @@ export default function AdminApp() {
   useEffect(() => {
     const tgId = localStorage.getItem('tg_id');
     const isSuperAdmin = import.meta.env.VITE_SUPER_ADMIN_ID && tgId === import.meta.env.VITE_SUPER_ADMIN_ID;
+    const token = getAdminToken();
 
-    if (isSuperAdmin) {
+    if (isSuperAdmin || token) {
       setIsAuthenticated(true);
     }
     setLoading(false);
   }, []);
 
   const handleLogout = () => {
+    clearAdminSession();
     setIsAuthenticated(false);
     navigate('/menu');
   };
 
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    let timeoutId;
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      // 30 minutes = 30 * 60 * 1000 ms = 1800000 ms
+      timeoutId = setTimeout(() => {
+        handleLogout();
+      }, 1800000);
+    };
+
+    // Initialize timer
+    resetTimer();
+
+    // Listeners for user activity
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    const handleActivity = () => resetTimer();
+    
+    events.forEach(event => document.addEventListener(event, handleActivity));
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      events.forEach(event => document.removeEventListener(event, handleActivity));
+    };
+  }, [isAuthenticated, navigate]);
+
   if (loading) return null;
 
   if (!isAuthenticated) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a', color: '#ef4444', flexDirection: 'column' }}>
-        <h2>Access Denied</h2>
-        <p style={{ color: '#94a3b8', marginTop: '10px' }}>You do not have permission to view the Admin Panel.</p>
-        <button onClick={() => navigate('/menu')} className="btn-secondary" style={{ marginTop: '20px' }}>Return to App</button>
-      </div>
-    );
+    return <AdminLogin onLogin={setIsAuthenticated} />;
   }
 
   return (
@@ -47,7 +72,7 @@ export default function AdminApp() {
       <div className="admin-layout admin-root">
         <aside className="admin-sidebar">
           <div className="admin-sidebar-logo">
-            <div className="admin-logo-mark">NovaGrid</div>
+            <div className="admin-logo-mark">AdShare</div>
             <div className="admin-logo-sub">Admin Panel</div>
           </div>
           <nav className="admin-nav">

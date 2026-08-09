@@ -85,7 +85,7 @@ const Earn = () => {
   const balance = Number(user?.balance || 0);
   const canWithdraw = balance >= MIN_WITHDRAWAL;
   const withdrawProgress = Math.min(100, (balance / MIN_WITHDRAWAL) * 100);
-  const unlockWithdraw = stats.total_earned > 0 || stats.ads_today > 0;
+  const unlockWithdraw = true;
 
   return (
     <div className="pb-24 px-4 pt-4">
@@ -189,31 +189,28 @@ const Earn = () => {
 
         {/* STEP 3: WITHDRAW */}
         <div 
-          className={`p-4 relative border ${unlockWithdraw ? 'bg-cardbg border-cardborder cursor-pointer' : 'bg-black/20 border-white/5 opacity-60'}`}
-          onClick={() => {
-            if (unlockWithdraw) navigate('/withdraw');
-            else showToast('You must watch at least 1 ad to unlock withdrawals.', 'error');
-          }}
+          className="bg-cardbg border-cardborder cursor-pointer p-4 relative border"
+          onClick={() => navigate('/withdraw')}
           role="button"
         >
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 flex items-center justify-center border ${unlockWithdraw ? 'bg-primary/10 border-primary/20' : 'bg-white/5 border-white/10'}`}>
-                {unlockWithdraw ? <Wallet size={20} className="text-primary" /> : <Lock size={20} className="text-textmuted" />}
+              <div className="w-10 h-10 flex items-center justify-center border bg-primary/10 border-primary/20">
+                <Wallet size={20} className="text-primary" />
               </div>
               <div>
-                <h3 className={`font-extrabold text-lg uppercase leading-none ${unlockWithdraw ? 'text-white' : 'text-textmuted'}`}>3. Withdraw</h3>
+                <h3 className="font-extrabold text-lg uppercase leading-none text-white">3. Withdraw</h3>
                 <div className="text-textmuted text-[10px] font-bold mt-1 uppercase">
-                  {unlockWithdraw ? 'CASH OUT YOUR USDT' : 'WATCH 1 AD TO UNLOCK'}
+                  CASH OUT YOUR USDT
                 </div>
               </div>
             </div>
           </div>
           <div className="flex justify-between items-end mt-4">
-            <div className={`text-xs font-bold font-mono ${unlockWithdraw ? 'text-white' : 'text-textmuted'}`}>
-              {unlockWithdraw ? (canWithdraw ? 'READY TO WITHDRAW' : 'MINIMUM NOT MET') : 'LOCKED'}
+            <div className="text-xs font-bold font-mono text-white">
+              {canWithdraw ? 'READY TO WITHDRAW' : 'MINIMUM NOT MET'}
             </div>
-            {unlockWithdraw && <ChevronRight size={16} className="text-white" />}
+            <ChevronRight size={16} className="text-white" />
           </div>
         </div>
       </div>
