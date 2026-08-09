@@ -28,5 +28,8 @@ export const getAdHistory = (params = {}) => api.get('/ads/history', { params })
 export const requestWithdrawal = (data) => api.post('/withdrawals/request', data);
 export const getWithdrawalHistory = () => api.get('/withdrawals/history');
 export const getReferrals = () => api.get('/users/referrals');
+export const submitSupportTicket = (body) => api.post('/support', body);
+export const getSupportTickets = () => api.get('/support');
+export const getLeaderboard = (params) => api.get('/users/leaderboard', { params });
 
 export default api;

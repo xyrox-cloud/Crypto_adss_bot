@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { getAdminToken, clearAdminSession } from '../api/adminApi';
 import { AdminToastProvider } from './AdminToast';
 import './admin.css';
-
-import AdminLogin from './AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminWithdrawals from './pages/AdminWithdrawals';
 import AdminUsers from './pages/AdminUsers';
 import AdminSettings from './pages/AdminSettings';
 import AdminActivityLog from './pages/AdminActivityLog';
+import AdminSupport from './pages/AdminSupport';
 
 export default function AdminApp() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -18,31 +16,30 @@ export default function AdminApp() {
   const location = useLocation();
 
   useEffect(() => {
-    const token = getAdminToken();
     const tgId = localStorage.getItem('tg_id');
     const isSuperAdmin = import.meta.env.VITE_SUPER_ADMIN_ID && tgId === import.meta.env.VITE_SUPER_ADMIN_ID;
 
-    if (token || isSuperAdmin) {
+    if (isSuperAdmin) {
       setIsAuthenticated(true);
     }
     setLoading(false);
   }, []);
 
-  const handleLogin = () => {
-    setIsAuthenticated(true);
-    navigate('/admin');
-  };
-
   const handleLogout = () => {
-    clearAdminSession();
     setIsAuthenticated(false);
-    navigate('/admin/login');
+    navigate('/menu');
   };
 
   if (loading) return null;
 
   if (!isAuthenticated) {
-    return <AdminLogin onLogin={handleLogin} />;
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a', color: '#ef4444', flexDirection: 'column' }}>
+        <h2>Access Denied</h2>
+        <p style={{ color: '#94a3b8', marginTop: '10px' }}>You do not have permission to view the Admin Panel.</p>
+        <button onClick={() => navigate('/menu')} className="btn-secondary" style={{ marginTop: '20px' }}>Return to App</button>
+      </div>
+    );
   }
 
   return (
@@ -62,6 +59,9 @@ export default function AdminApp() {
             </NavLink>
             <NavLink to="/admin/users" className={({ isActive }) => `admin-nav-item ${isActive ? 'active' : ''}`}>
               <span>Users</span>
+            </NavLink>
+            <NavLink to="/admin/support" className={({ isActive }) => `admin-nav-item ${isActive ? 'active' : ''}`}>
+              <span>Support</span>
             </NavLink>
             <NavLink to="/admin/settings" className={({ isActive }) => `admin-nav-item ${isActive ? 'active' : ''}`}>
               <span>Settings</span>
@@ -83,6 +83,7 @@ export default function AdminApp() {
               {location.pathname === '/admin' && 'Dashboard'}
               {location.pathname === '/admin/withdrawals' && 'Withdrawals'}
               {location.pathname === '/admin/users' && 'Users'}
+              {location.pathname === '/admin/support' && 'Support'}
               {location.pathname === '/admin/settings' && 'Settings'}
               {location.pathname === '/admin/activity-log' && 'Activity Log'}
             </div>
@@ -95,6 +96,7 @@ export default function AdminApp() {
               <Route path="/" element={<AdminDashboard />} />
               <Route path="/withdrawals" element={<AdminWithdrawals />} />
               <Route path="/users" element={<AdminUsers />} />
+              <Route path="/support" element={<AdminSupport />} />
               <Route path="/settings" element={<AdminSettings />} />
               <Route path="/activity-log" element={<AdminActivityLog />} />
             </Routes>

@@ -5,12 +5,7 @@ module.exports = {
   
   balanceError: () => `❌ Sorry, we couldn't fetch your balance right now. Please try again later.`,
   
-  help: () => `**AdShare Bot Help**\n\n` +
-    `💸 **How to earn:** Watch ads in the Mini App and earn USDT instantly.\n` +
-    `💳 **How to withdraw:** Once you reach a minimum of $2 USDT (BEP20), you can request a withdrawal via the Mini App.\n` +
-    `👥 **Referrals:** Invite friends using your referral code and earn a percentage of their ad revenue.\n` +
-    `📞 **Support:** Contact @SupportUsername for help.`,
-    
+
   withdrawInsufficient: () => `Your balance is below the minimum withdrawal amount of 2 USDT. Keep watching ads to earn more!`,
   
   withdrawApp: () => `Please open the AdShare Mini App to process your withdrawal request.`,

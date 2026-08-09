@@ -34,11 +34,20 @@ const ReferIcon = ({ active }) => (
   </svg>
 );
 
+const MenuIcon = ({ active }) => (
+  <svg className="nav-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+);
+
 const navItems = [
   { to: '/',          label: 'Home',     Icon: HomeIcon },
   { to: '/history',   label: 'History',  Icon: HistoryIcon },
   { to: '/withdraw',  label: 'Withdraw', Icon: WithdrawIcon },
   { to: '/referrals', label: 'Refer',    Icon: ReferIcon },
+  { to: '/menu',      label: 'Menu',     Icon: MenuIcon },
 ];
 
 const BottomNav = () => (

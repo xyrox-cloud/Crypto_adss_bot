@@ -80,4 +80,46 @@ router.get('/referrals', extractTelegramUser, (req, res) => {
   }
 });
 
+/* ─────────────────────────────────────────────────────────────────
+   GET /api/users/leaderboard
+───────────────────────────────────────────────────────────────── */
+router.get('/leaderboard', extractTelegramUser, (req, res) => {
+  try {
+    const db = getDb();
+    const { time } = req.query; // 'today' or 'all_time'
+
+    let orderCol = 'total_ads_watched';
+    let whereClause = '';
+
+    if (time === 'today') {
+      // For today, we might need to count from ad_watches, but since we don't have a daily column in users,
+      // we join and group.
+      const rows = db.prepare(`
+        SELECT u.id, u.telegram_id, u.username, u.first_name, COUNT(a.id) as score
+        FROM users u
+        JOIN ad_watches a ON u.id = a.user_id
+        WHERE date(a.timestamp) = date('now')
+        GROUP BY u.id
+        ORDER BY score DESC
+        LIMIT 50
+      `).all();
+
+      res.json({ leaderboard: rows });
+    } else {
+      // All time
+      const rows = db.prepare(`
+        SELECT id, telegram_id, username, first_name, total_ads_watched as score
+        FROM users
+        ORDER BY total_ads_watched DESC
+        LIMIT 50
+      `).all();
+
+      res.json({ leaderboard: rows });
+    }
+  } catch (err) {
+    console.error('[Leaderboard]', err);
+    res.status(500).json({ error: 'Failed to fetch leaderboard' });
+  }
+});
+
 module.exports = router;

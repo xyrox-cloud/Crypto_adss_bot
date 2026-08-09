@@ -11,6 +11,8 @@ const usersRouter = require('./routes/users');
 const adsRouter = require('./routes/ads');
 const withdrawalsRouter = require('./routes/withdrawals');
 const adminRouter = require('./routes/admin');
+const supportRouter = require('./routes/support');
+const { sanitizeInput } = require('./middleware/sanitize');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -35,6 +37,7 @@ app.use(morgan('dev'));
 
 // Body parsing
 app.use(express.json());
+app.use(sanitizeInput);
 
 // Global rate limit — 200 requests per 15 min per IP (keeps scraper bots away)
 app.use(rateLimit({
@@ -58,6 +61,7 @@ app.use('/api/users', usersRouter);
 app.use('/api/ads', adsRouter);
 app.use('/api/withdrawals', withdrawalsRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/support', supportRouter);
 
 // Health check
 app.get('/health', (req, res) => {

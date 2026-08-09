@@ -65,26 +65,30 @@ export function getAdminToken() {
 }
 
 // Auth
-export const adminLogin   = (password) => adminApi.post('/login', { password });
-export const adminRefresh = () => adminApi.post('/refresh');
+export const adminLogin   = (password) => adminApi.post('login', { password });
+export const adminRefresh = () => adminApi.post('refresh');
 
 // Dashboard
-export const getAdminStats = () => adminApi.get('/stats');
+export const getAdminStats = () => adminApi.get('stats');
 
 // Withdrawals
-export const getAdminWithdrawals = (params) => adminApi.get('/withdrawals', { params });
-export const updateWithdrawal    = (id, body) => adminApi.patch(`/withdrawals/${id}`, body);
+export const getAdminWithdrawals = (params) => adminApi.get('withdrawals', { params });
+export const updateWithdrawal    = (id, body) => adminApi.patch(`withdrawals/${id}`, body);
 
 // Users
-export const getAdminUsers    = (params)    => adminApi.get('/users', { params });
-export const adjustBalance    = (id, body)  => adminApi.patch(`/users/${id}/balance`, body);
-export const setBanStatus     = (id, banned) => adminApi.patch(`/users/${id}/ban`, { banned });
+export const getAdminUsers    = (params)    => adminApi.get('users', { params });
+export const adjustBalance    = (id, body)  => adminApi.patch(`users/${id}/balance`, body);
+export const setBanStatus     = (id, banned) => adminApi.patch(`users/${id}/ban`, { banned });
 
 // Settings
-export const getAdminSettings  = () => adminApi.get('/settings');
-export const saveAdminSettings = (settings) => adminApi.put('/settings', { settings });
+export const getAdminSettings  = () => adminApi.get('settings');
+export const saveAdminSettings = (settings) => adminApi.put('settings', { settings });
 
 // Activity Log
-export const getActivityLog = (params) => adminApi.get('/activity-log', { params });
+export const getActivityLog = (params) => adminApi.get('activity-log', { params });
+
+// Support Tickets
+export const getAdminTickets = (params) => adminApi.get('tickets', { params });
+export const updateAdminTicket = (id, body) => adminApi.patch(`tickets/${id}`, body);
 
 export default adminApi;

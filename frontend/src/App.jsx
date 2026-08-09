@@ -10,6 +10,13 @@ import { UserProvider } from './context/UserContext';
 import { ToastProvider } from './context/ToastContext';
 import { registerUser } from './api/api';
 import AdminApp from './admin/AdminApp';
+import Menu from './pages/Menu';
+import About from './pages/About';
+import Support from './pages/Support';
+import AdPolicy from './pages/AdPolicy';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
+import Leaderboard from './pages/Leaderboard';
 
 function App() {
   const [initializing, setInitializing] = useState(true);
@@ -79,6 +86,13 @@ function App() {
               <Route path="/history" element={<History />} />
               <Route path="/withdraw" element={<Withdraw />} />
               <Route path="/referrals" element={<Referrals />} />
+              <Route path="/menu" element={<Menu />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/support" element={<Support />} />
+              <Route path="/ad-policy" element={<AdPolicy />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/admin/*" element={<AdminApp />} />
             </Routes>
           </div>

@@ -1,6 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
 const { getDb, getSettings } = require('../db/database');
 const { requireAdmin } = require('../middleware/auth');
 const router = express.Router();
@@ -19,41 +20,7 @@ function logAction(db, action, details) {
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   POST /api/admin/login
-───────────────────────────────────────────────────────────────── */
-router.post('/login', (req, res) => {
-  const { password } = req.body;
-  const storedHash = process.env.ADMIN_PASSWORD;
-
-  if (!password || !storedHash) {
-    return res.status(401).json({ error: 'Invalid credentials' });
-  }
-
-  // Support both plain-text (legacy dev) and bcrypt hashes
-  let valid = false;
-  if (storedHash.startsWith('$2')) {
-    // bcrypt hash
-    valid = bcrypt.compareSync(password, storedHash);
-  } else {
-    // plain text (dev only)
-    valid = password === storedHash;
-  }
-
-  if (!valid) {
-    return res.status(401).json({ error: 'Invalid password' });
-  }
-
-  const token = jwt.sign(
-    { role: 'admin', iat: Date.now() },
-    process.env.ADMIN_JWT_SECRET,
-    { expiresIn: '30m' }  // 30-min inactivity — client renews on each action
-  );
-
-  res.json({ token });
-});
-
-/* ─────────────────────────────────────────────────────────────────
-   POST /api/admin/refresh  — sliding session renewal
+   POST /api/admin/refresh  — sliding session renewal (Deprecated)
 ───────────────────────────────────────────────────────────────── */
 router.post('/refresh', requireAdmin, (req, res) => {
   const token = jwt.sign(
@@ -443,6 +410,88 @@ router.get('/ad-watches', requireAdmin, (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch ad watches' });
+  }
+});
+
+/* ─────────────────────────────────────────────────────────────────
+   GET /api/admin/tickets
+   ?status=open|closed&page=&limit=
+───────────────────────────────────────────────────────────────── */
+router.get('/tickets', requireAdmin, (req, res) => {
+  try {
+    const db = getDb();
+    const { status, search } = req.query;
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+    const params = [];
+
+    if (status && ['open', 'closed'].includes(status)) {
+      conditions.push('t.status = ?');
+      params.push(status);
+    }
+    if (search) {
+      conditions.push('(u.username LIKE ? OR u.first_name LIKE ? OR t.telegram_id LIKE ?)');
+      const q = `%${search}%`;
+      params.push(q, q, q);
+    }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const rows = db.prepare(`
+      SELECT t.*, u.username, u.first_name
+      FROM support_tickets t
+      LEFT JOIN users u ON t.user_id = u.id
+      ${where}
+      ORDER BY 
+        CASE t.status WHEN 'open' THEN 0 ELSE 1 END,
+        t.created_at DESC
+      LIMIT ? OFFSET ?
+    `).all(...params, limit, offset);
+
+    const total = db.prepare(`
+      SELECT COUNT(*) as c
+      FROM support_tickets t LEFT JOIN users u ON t.user_id=u.id
+      ${where}
+    `).all(...params)[0].c;
+
+    res.json({
+      tickets: rows,
+      pagination: { total, page, limit, pages: Math.ceil(total / limit) }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch tickets' });
+  }
+});
+
+/* ─────────────────────────────────────────────────────────────────
+   PATCH /api/admin/tickets/:id
+   body: { status: 'closed', admin_reply: 'text' }
+───────────────────────────────────────────────────────────────── */
+router.patch('/tickets/:id', requireAdmin, (req, res) => {
+  try {
+    const db = getDb();
+    const { id } = req.params;
+    const { status, admin_reply } = req.body;
+
+    const ticket = db.prepare('SELECT * FROM support_tickets WHERE id=?').get(id);
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+
+    db.prepare(`
+      UPDATE support_tickets 
+      SET status = ?, admin_reply = COALESCE(?, admin_reply)
+      WHERE id = ?
+    `).run(status || ticket.status, admin_reply, id);
+
+    logAction(db, 'TICKET_UPDATED', { ticket_id: id, status });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update ticket' });
   }
 });
 

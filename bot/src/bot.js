@@ -104,18 +104,6 @@ bot.command('balance', async (ctx) => {
   }
 });
 
-/**
- * Command: /help
- * Displays detailed information about the platform.
- */
-bot.command('help', async (ctx) => {
-  await ctx.reply(messages.help(), {
-    parse_mode: 'Markdown',
-    ...Markup.inlineKeyboard([
-      [Markup.button.webApp('🚀 Open AdShare App', MINI_APP_URL)]
-    ])
-  });
-});
 
 /**
  * Command: /withdraw
