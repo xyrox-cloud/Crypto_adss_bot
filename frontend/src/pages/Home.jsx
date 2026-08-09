@@ -5,6 +5,7 @@ import { useToast } from '../context/ToastContext';
 import { getAdStats } from '../api/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SpinWheel from '../components/SpinWheel';
+import ScratchCard from '../components/ScratchCard';
 import { Settings, User, Play, ChevronRight, Zap, Target, Star, Calendar, Gift, X } from 'lucide-react';
 import api from '../api/api';
 
@@ -20,6 +21,7 @@ const Home = () => {
   const [loadingAd, setLoadingAd] = useState(false);
   const [claimingDaily, setClaimingDaily] = useState(false);
   const [showSpinWheel, setShowSpinWheel] = useState(false);
+  const [showScratchCard, setShowScratchCard] = useState(false);
   const [stats, setStats] = useState({ ads_today: 0, ads_this_week: 0, total_earned: 0 });
 
   useEffect(() => { fetchStats(); }, []);
@@ -214,6 +216,27 @@ const Home = () => {
         <ChevronRight size={24} className="text-white opacity-80" />
       </div>
 
+      {/* 2.5 SCRATCH CARD */}
+      <div 
+        className="bg-[#3b82f6] rounded-3xl p-5 mb-4 flex justify-between items-center relative overflow-hidden"
+        onClick={() => setShowScratchCard(true)}
+      >
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none"></div>
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center border border-white/20 shadow-lg">
+            <Gift size={28} className="text-white" />
+          </div>
+          <div>
+            <div className="bg-black/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mb-1">
+              FREE
+            </div>
+            <h2 className="text-white font-extrabold text-2xl uppercase leading-none mb-1">SCRATCH & WIN</h2>
+            <div className="text-white/90 text-xs font-bold">REVEAL YOUR DAILY USDT</div>
+          </div>
+        </div>
+        <ChevronRight size={24} className="text-white opacity-80" />
+      </div>
+
       {/* 3. WATCH AD FOR EXTRA REWARD */}
       <div 
         className="bg-[#26A17B] rounded-3xl p-5 mb-6 relative overflow-hidden" 
@@ -264,6 +287,25 @@ const Home = () => {
               <h2 className="text-2xl font-extrabold text-white uppercase mb-2">Daily Spin</h2>
               <p className="text-textmuted text-sm mb-6">Play once a day for a chance to win free USDT!</p>
               <SpinWheel onComplete={() => setTimeout(() => setShowSpinWheel(false), 2000)} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SCRATCH CARD MODAL */}
+      {showScratchCard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-cardbg border border-cardborder rounded-3xl w-full max-w-sm overflow-hidden relative">
+            <button 
+              className="absolute top-4 right-4 bg-white/10 p-2 rounded-full hover:bg-white/20 transition-colors z-10"
+              onClick={() => setShowScratchCard(false)}
+            >
+              <X size={20} className="text-white" />
+            </button>
+            <div className="p-6 text-center">
+              <h2 className="text-2xl font-extrabold text-white uppercase mb-2">Scratch & Win</h2>
+              <p className="text-textmuted text-sm mb-6">Scratch once a day for a chance to win free USDT!</p>
+              <ScratchCard onComplete={() => setTimeout(() => setShowScratchCard(false), 2000)} />
             </div>
           </div>
         </div>

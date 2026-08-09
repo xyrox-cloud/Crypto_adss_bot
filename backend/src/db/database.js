@@ -36,6 +36,7 @@ function initDb() {
       last_daily_claim DATETIME,
       daily_streak INTEGER DEFAULT 0,
       last_minigame_claim DATETIME,
+      last_scratch_claim DATETIME,
       referral_bonus_paid INTEGER DEFAULT 0
     );
 
@@ -131,6 +132,8 @@ function initDb() {
     db.exec('ALTER TABLE users ADD COLUMN last_minigame_claim DATETIME');
   if (!userCols.includes('referral_bonus_paid'))
     db.exec('ALTER TABLE users ADD COLUMN referral_bonus_paid INTEGER DEFAULT 0');
+  if (!userCols.includes('last_scratch_claim'))
+    db.exec('ALTER TABLE users ADD COLUMN last_scratch_claim DATETIME');
 
   // Add new columns to existing ad_watches table if they don't exist (migration)
   const adWatchCols = db.pragma('table_info(ad_watches)').map(c => c.name);
@@ -212,7 +215,7 @@ function processReferralBonus(db, user, ipAddress) {
     // Record activity
     db.prepare(`
       INSERT INTO activity_log (action, details) VALUES (?, ?)
-    `).run('referral_bonus_granted', \`Referrer \${referrer.telegram_id} earned \${bonusAmount} USDT for referring \${user.telegram_id}\`);
+    `).run('referral_bonus_granted', `Referrer ${referrer.telegram_id} earned ${bonusAmount} USDT for referring ${user.telegram_id}`);
   });
   
   try {

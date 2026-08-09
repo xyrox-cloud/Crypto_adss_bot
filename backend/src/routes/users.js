@@ -436,5 +436,80 @@ router.post('/minigame-claim', extractTelegramUser, (req, res) => {
     res.status(500).json({ error: 'Failed to process minigame claim' });
   }
 });
+// SCRATCH CARD CLAIM
+router.post('/scratch-claim', gameLimiter, (req, res) => {
+  const telegramId = req.headers['x-telegram-id'];
+  if (!telegramId) return res.status(401).json({ error: 'Unauthorized' });
+
+  const db = getDb();
+  
+  try {
+    const user = db.prepare('SELECT * FROM users WHERE telegram_id = ? AND banned = 0').get(telegramId);
+    if (!user) return res.status(404).json({ error: 'User not found or banned' });
+
+    const now = new Date();
+    const lastClaim = user.last_scratch_claim ? new Date(user.last_scratch_claim) : null;
+    
+    // Check if claimed in the last 24 hours
+    if (lastClaim && (now - lastClaim) < 24 * 60 * 60 * 1000) {
+      const waitMs = (24 * 60 * 60 * 1000) - (now - lastClaim);
+      const hours = Math.floor(waitMs / (1000 * 60 * 60));
+      const minutes = Math.floor((waitMs % (1000 * 60 * 60)) / (1000 * 60));
+      return res.status(429).json({ error: `Please wait ${hours}h ${minutes}m before playing again` });
+    }
+
+    const rand = Math.random() * 100;
+    let rewardUsdt = 0;
+    let message = '';
+
+    if (rand < 90) {
+      rewardUsdt = 0.001;
+    } else {
+      rewardUsdt = 0;
+      message = 'Better luck next time!';
+    }
+
+    const tx = db.transaction(() => {
+      if (rewardUsdt > 0) {
+        db.prepare(`
+          UPDATE users
+          SET balance = balance + ?,
+              total_earned = total_earned + ?,
+              last_scratch_claim = CURRENT_TIMESTAMP,
+              last_seen = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(rewardUsdt, rewardUsdt, user.id);
+
+        db.prepare(`
+          INSERT INTO ad_rewards (user_id, amount, ip)
+          VALUES (?, ?, ?)
+        `).run(user.id, rewardUsdt, req.ip || req.connection?.remoteAddress || 'system');
+      } else {
+        db.prepare(`
+          UPDATE users
+          SET last_scratch_claim = CURRENT_TIMESTAMP,
+              last_seen = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(user.id);
+      }
+
+      db.prepare(`
+        INSERT INTO activity_log (action, details) VALUES (?, ?)
+      `).run('scratch_reward_granted', `User ${telegramId} won scratch reward ${rewardUsdt} USDT.`);
+    });
+
+    tx();
+
+    if (rewardUsdt > 0) {
+      const updatedUser = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+      processReferralBonus(db, updatedUser, req.ip || req.connection?.remoteAddress);
+    }
+
+    res.json({ success: true, reward: rewardUsdt, message });
+  } catch (err) {
+    console.error('[Scratch Claim Error]', err);
+    res.status(500).json({ error: 'Failed to process scratch claim' });
+  }
+});
 
 module.exports = router;
