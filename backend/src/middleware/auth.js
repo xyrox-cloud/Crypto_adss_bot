@@ -2,6 +2,25 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
 function requireAdmin(req, res, next) {
+  const superAdminId = process.env.SUPER_ADMIN_ID;
+  
+  if (superAdminId) {
+    const initData = req.headers['x-telegram-init-data'];
+    const botToken = process.env.BOT_TOKEN;
+    const tgId = req.headers['x-telegram-id'];
+
+    if (initData && botToken && botToken !== 'placeholder_bot_token') {
+      const tgUser = verifyTelegramInitData(initData, botToken);
+      if (tgUser && String(tgUser.id).split('.')[0] === superAdminId) {
+        req.admin = { role: 'super_admin' };
+        return next();
+      }
+    } else if (tgId && String(tgId).split('.')[0] === superAdminId) {
+      req.admin = { role: 'super_admin' };
+      return next();
+    }
+  }
+
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Unauthorized: Missing or invalid token' });

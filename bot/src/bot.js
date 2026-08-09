@@ -168,8 +168,22 @@ bot.action('check_balance', async (ctx) => {
 });
 
 // Launch the bot with graceful shutdown handling
-bot.launch().then(() => {
+bot.launch().then(async () => {
   console.log('Bot is running!');
+  
+  // Set persistent menu button globally for all users
+  try {
+    const result = await bot.telegram.setChatMenuButton({
+      menuButton: {
+        type: 'web_app',
+        text: '🚀 Open App',
+        web_app: { url: MINI_APP_URL }
+      }
+    });
+    console.log('Set Menu Button Result:', result);
+  } catch (error) {
+    console.error('Failed to set menu button:', error);
+  }
 }).catch((error) => {
   console.error('Failed to launch bot:', error);
 });

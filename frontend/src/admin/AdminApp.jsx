@@ -19,7 +19,10 @@ export default function AdminApp() {
 
   useEffect(() => {
     const token = getAdminToken();
-    if (token) {
+    const tgId = localStorage.getItem('tg_id');
+    const isSuperAdmin = import.meta.env.VITE_SUPER_ADMIN_ID && tgId === import.meta.env.VITE_SUPER_ADMIN_ID;
+
+    if (token || isSuperAdmin) {
       setIsAuthenticated(true);
     }
     setLoading(false);

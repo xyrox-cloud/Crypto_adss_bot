@@ -12,6 +12,14 @@ const adminApi = axios.create({
 adminApi.interceptors.request.use((config) => {
   const token = localStorage.getItem(ADMIN_TOKEN_KEY);
   if (token) config.headers['Authorization'] = `Bearer ${token}`;
+  
+  // Attach Telegram initData if available (for super_admin bypass)
+  const initData = window.Telegram?.WebApp?.initData;
+  if (initData) config.headers['x-telegram-init-data'] = initData;
+  
+  const tgId = localStorage.getItem('tg_id');
+  if (tgId) config.headers['x-telegram-id'] = tgId;
+
   resetInactivityTimer();
   return config;
 });
@@ -29,6 +37,11 @@ adminApi.interceptors.response.use(
 );
 
 function resetInactivityTimer() {
+  const tgId = localStorage.getItem('tg_id');
+  if (import.meta.env.VITE_SUPER_ADMIN_ID && tgId === import.meta.env.VITE_SUPER_ADMIN_ID) {
+    return; // Super admin never expires
+  }
+  
   if (inactivityTimer) clearTimeout(inactivityTimer);
   inactivityTimer = setTimeout(() => {
     clearAdminSession();

@@ -319,6 +319,11 @@ router.patch('/users/:id/ban', requireAdmin, (req, res) => {
 
     const user = db.prepare('SELECT id, telegram_id, username FROM users WHERE id=?').get(id);
     if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    // Prevent banning the Super Admin
+    if (process.env.SUPER_ADMIN_ID && String(user.telegram_id) === process.env.SUPER_ADMIN_ID) {
+      return res.status(403).json({ error: 'Cannot ban the Super Admin' });
+    }
 
     db.prepare('UPDATE users SET banned=? WHERE id=?').run(banned, id);
 

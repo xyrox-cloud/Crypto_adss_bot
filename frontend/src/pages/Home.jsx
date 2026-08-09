@@ -95,22 +95,43 @@ const Home = () => {
   );
 
   const adsRemaining = Math.max(0, MAX_ADS_PER_DAY - stats.ads_today);
-  const displayName = user.first_name
-    ? (user.username ? `${user.first_name}` : user.first_name)
-    : (user.username || 'User');
-  const initials = getInitials(user.first_name || user.username || 'U');
+  
+  const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+  
+  let tgDisplayName = 'Guest';
+  if (tgUser && tgUser.first_name) {
+    tgDisplayName = tgUser.first_name + (tgUser.last_name ? ` ${tgUser.last_name}` : '');
+  } else if (user && user.first_name) {
+    tgDisplayName = user.first_name;
+  } else if (user && user.username) {
+    tgDisplayName = user.username;
+  }
+
+  const tgUsername = tgUser?.username || user?.username || '';
+  const photoUrl = tgUser?.photo_url;
+  
+  const initials = getInitials(tgDisplayName !== 'Guest' ? tgDisplayName : (tgUsername || 'G'));
 
   return (
     <div className="home-page">
 
       {/* ── User header ─────────────────────── */}
-      <div className="user-header">
-        <div className="user-avatar" aria-label="User avatar">{initials}</div>
-        <div className="user-info">
-          <div className="user-name">
-            {user.username ? `@${user.username}` : displayName}
+      <div className="user-header" style={{ alignItems: 'center' }}>
+        {photoUrl ? (
+          <img src={photoUrl} alt="Avatar" className="user-avatar" style={{ objectFit: 'cover' }} />
+        ) : (
+          <div className="user-avatar" aria-label="User avatar">{initials}</div>
+        )}
+        <div className="user-info" style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
+          <div className="user-name" style={{ fontSize: '17px', lineHeight: '1.2' }}>
+            {tgDisplayName}
           </div>
-          <div className="user-tagline">
+          {tgUsername && (
+            <div style={{ color: 'var(--text-dim)', fontSize: '13px', lineHeight: '1.2', marginBottom: '2px' }}>
+              @{tgUsername}
+            </div>
+          )}
+          <div className="user-tagline" style={{ marginTop: '2px' }}>
             {adsRemaining > 0
               ? `${adsRemaining} ad${adsRemaining !== 1 ? 's' : ''} available today`
               : 'Daily limit reached · Come back tomorrow'}
