@@ -123,7 +123,35 @@ const Earn = () => {
       </div>
 
       <div className="space-y-4">
-        {/* STEP 1: WATCH ADS */}
+        {/* STEP 1: INVITE FRIENDS */}
+        <div 
+          className={`p-4 relative border ${ENABLE_REFERRALS ? 'bg-cardbg border-cardborder cursor-pointer' : 'bg-black/20 border-white/5 opacity-50 grayscale pointer-events-none'}`}
+          onClick={() => ENABLE_REFERRALS && navigate('/referrals')}
+          role="button"
+        >
+          <div className="flex justify-between items-center mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center">
+                <Users size={20} className="text-white" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-lg text-white uppercase leading-none">1. Invite Friends</h3>
+                <div className="text-textmuted text-[10px] font-bold mt-1 uppercase">10% of their earnings</div>
+              </div>
+            </div>
+            <div className="text-primary text-[10px] font-bold bg-primary/10 border border-primary/20 px-2 py-1">
+              $0.05 / REF
+            </div>
+          </div>
+          <div className="flex justify-between items-end mt-4">
+            <div className="text-white text-xs font-bold font-mono">
+              {user?.referrals_count || 0} INVITES
+            </div>
+            <ChevronRight size={16} className="text-white" />
+          </div>
+        </div>
+
+        {/* STEP 2: WATCH ADS */}
         <div 
           className="bg-cardbg border border-cardborder p-4 relative"
           onClick={handleWatchAd}
@@ -143,7 +171,7 @@ const Earn = () => {
                 </div>
               </div>
               <div>
-                <h3 className="font-extrabold text-lg text-white uppercase leading-none">1. Watch Ads</h3>
+                <h3 className="font-extrabold text-lg text-white uppercase leading-none">2. Extra: Watch Ads</h3>
                 <div className="text-textmuted text-[10px] font-bold mt-1 uppercase">Earn USDT Directly</div>
               </div>
             </div>
@@ -154,34 +182,6 @@ const Earn = () => {
           <div className="flex justify-between items-end mt-4">
             <div className="text-white text-xs font-bold font-mono">
               {loadingAd ? 'LOADING...' : `${adsRemaining} ADS LEFT TODAY`}
-            </div>
-            <ChevronRight size={16} className="text-white" />
-          </div>
-        </div>
-
-        {/* STEP 2: INVITE FRIENDS */}
-        <div 
-          className={`p-4 relative border ${ENABLE_REFERRALS ? 'bg-cardbg border-cardborder cursor-pointer' : 'bg-black/20 border-white/5 opacity-50 grayscale pointer-events-none'}`}
-          onClick={() => ENABLE_REFERRALS && navigate('/referrals')}
-          role="button"
-        >
-          <div className="flex justify-between items-center mb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center">
-                <Users size={20} className="text-white" />
-              </div>
-              <div>
-                <h3 className="font-extrabold text-lg text-white uppercase leading-none">2. Invite Friends</h3>
-                <div className="text-textmuted text-[10px] font-bold mt-1 uppercase">10% of their earnings</div>
-              </div>
-            </div>
-            <div className="text-primary text-[10px] font-bold bg-primary/10 border border-primary/20 px-2 py-1">
-              $0.05 / REF
-            </div>
-          </div>
-          <div className="flex justify-between items-end mt-4">
-            <div className="text-white text-xs font-bold font-mono">
-              {user?.referrals_count || 0} INVITES
             </div>
             <ChevronRight size={16} className="text-white" />
           </div>
