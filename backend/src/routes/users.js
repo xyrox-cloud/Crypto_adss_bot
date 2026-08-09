@@ -309,7 +309,7 @@ router.post('/daily-claim', extractTelegramUser, (req, res) => {
       const waitMs = (24 * 60 * 60 * 1000) - (now - lastClaim);
       const hours = Math.floor(waitMs / (1000 * 60 * 60));
       const minutes = Math.floor((waitMs % (1000 * 60 * 60)) / (1000 * 60));
-      return res.status(429).json({ error: \`Please wait \${hours}h \${minutes}m before claiming again\` });
+      return res.status(429).json({ error: `Please wait ${hours}h ${minutes}m before claiming again` });
     }
 
     const settings = getSettings();
@@ -322,7 +322,7 @@ router.post('/daily-claim', extractTelegramUser, (req, res) => {
     }
 
     const tx = db.transaction(() => {
-      db.prepare(\`
+      db.prepare(`
         UPDATE users
         SET balance = balance + ?,
             total_earned = total_earned + ?,
@@ -330,16 +330,16 @@ router.post('/daily-claim', extractTelegramUser, (req, res) => {
             daily_streak = ?,
             last_seen = CURRENT_TIMESTAMP
         WHERE id = ?
-      \`).run(rewardUsdt, rewardUsdt, newStreak, user.id);
+      `).run(rewardUsdt, rewardUsdt, newStreak, user.id);
 
-      db.prepare(\`
+      db.prepare(`
         INSERT INTO ad_rewards (user_id, amount, ip)
         VALUES (?, ?, ?)
-      \`).run(user.id, rewardUsdt, req.ip || req.connection?.remoteAddress || 'system');
+      `).run(user.id, rewardUsdt, req.ip || req.connection?.remoteAddress || 'system');
 
-      db.prepare(\`
+      db.prepare(`
         INSERT INTO activity_log (action, details) VALUES (?, ?)
-      \`).run('daily_bonus_granted', \`User \${telegramId} claimed daily bonus \${rewardUsdt} USDT. Streak: \${newStreak}\`);
+      `).run('daily_bonus_granted', `User ${telegramId} claimed daily bonus ${rewardUsdt} USDT. Streak: ${newStreak}`);
     });
 
     tx();
@@ -376,43 +376,61 @@ router.post('/minigame-claim', extractTelegramUser, (req, res) => {
       const waitMs = (24 * 60 * 60 * 1000) - (now - lastClaim);
       const hours = Math.floor(waitMs / (1000 * 60 * 60));
       const minutes = Math.floor((waitMs % (1000 * 60 * 60)) / (1000 * 60));
-      return res.status(429).json({ error: \`Please wait \${hours}h \${minutes}m before playing again\` });
+      return res.status(429).json({ error: `Please wait ${hours}h ${minutes}m before playing again` });
     }
 
-    const settings = getSettings();
-    const minReward = parseFloat(settings.minigame_min_reward || '0.001');
-    const maxReward = parseFloat(settings.minigame_max_reward || '0.005');
-    
-    // Random reward between min and max
-    const rewardUsdt = Number((Math.random() * (maxReward - minReward) + minReward).toFixed(4));
+    const rand = Math.random() * 100;
+    let rewardUsdt = 0;
+    let message = '';
+
+    if (rand < 50) {
+      rewardUsdt = 0.001;
+    } else if (rand < 85) {
+      rewardUsdt = 0;
+      message = 'Better luck next time!';
+    } else if (rand < 90) {
+      rewardUsdt = 0.01;
+    } else {
+      rewardUsdt = 0.0015;
+    }
 
     const tx = db.transaction(() => {
-      db.prepare(\`
-        UPDATE users
-        SET balance = balance + ?,
-            total_earned = total_earned + ?,
-            last_minigame_claim = CURRENT_TIMESTAMP,
-            last_seen = CURRENT_TIMESTAMP
-        WHERE id = ?
-      \`).run(rewardUsdt, rewardUsdt, user.id);
+      if (rewardUsdt > 0) {
+        db.prepare(`
+          UPDATE users
+          SET balance = balance + ?,
+              total_earned = total_earned + ?,
+              last_minigame_claim = CURRENT_TIMESTAMP,
+              last_seen = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(rewardUsdt, rewardUsdt, user.id);
 
-      db.prepare(\`
-        INSERT INTO ad_rewards (user_id, amount, ip)
-        VALUES (?, ?, ?)
-      \`).run(user.id, rewardUsdt, req.ip || req.connection?.remoteAddress || 'system');
+        db.prepare(`
+          INSERT INTO ad_rewards (user_id, amount, ip)
+          VALUES (?, ?, ?)
+        `).run(user.id, rewardUsdt, req.ip || req.connection?.remoteAddress || 'system');
+      } else {
+        db.prepare(`
+          UPDATE users
+          SET last_minigame_claim = CURRENT_TIMESTAMP,
+              last_seen = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(user.id);
+      }
 
-      db.prepare(\`
+      db.prepare(`
         INSERT INTO activity_log (action, details) VALUES (?, ?)
-      \`).run('minigame_reward_granted', \`User \${telegramId} won minigame reward \${rewardUsdt} USDT.\`);
+      `).run('minigame_reward_granted', `User ${telegramId} won minigame reward ${rewardUsdt} USDT.`);
     });
 
     tx();
 
-    // Check referral bonus
-    const updatedUser = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
-    processReferralBonus(db, updatedUser, req.ip || req.connection?.remoteAddress);
+    if (rewardUsdt > 0) {
+      const updatedUser = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+      processReferralBonus(db, updatedUser, req.ip || req.connection?.remoteAddress);
+    }
 
-    res.json({ success: true, reward: rewardUsdt });
+    res.json({ success: true, reward: rewardUsdt, message });
   } catch (err) {
     console.error('[Minigame Claim Error]', err);
     res.status(500).json({ error: 'Failed to process minigame claim' });
