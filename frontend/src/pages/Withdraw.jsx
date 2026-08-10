@@ -4,7 +4,7 @@ import { useToast } from '../context/ToastContext';
 import { requestWithdrawal } from '../api/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-const MIN_WITHDRAWAL = parseFloat(import.meta.env.VITE_MIN_WITHDRAWAL || '0.50');
+import { MIN_WITHDRAWAL } from '../config';
 
 const Withdraw = () => {
   const { user, refreshUser } = useUser();

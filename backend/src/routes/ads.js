@@ -42,7 +42,8 @@ router.get('/reward', rewardLimiter, (req, res) => {
     // 3. Read live settings from DB
     const settings = getSettings();
     const maxAdsPerDay    = Math.floor(settings.max_ads_per_day  ?? 20);
-    const rewardUsdt      = parseFloat(settings.reward_per_ad    ?? 0.01);
+    const sharedConfig    = require('../../../config.json');
+    const rewardUsdt      = sharedConfig.REWARD_PER_AD;
     
     // Fetch revenue_split or calculate from platform_cut_pct
     const userSplitPct    = parseFloat(settings.revenue_split ?? (100 - parseFloat(settings.platform_cut_pct ?? 40)));

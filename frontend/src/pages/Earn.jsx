@@ -7,7 +7,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { ChevronDown, ChevronUp, Wallet, Users, Play, CheckCircle } from 'lucide-react';
 
 const MAX_ADS_PER_DAY = parseInt(import.meta.env.VITE_MAX_ADS_PER_DAY || '20', 10);
-const MIN_WITHDRAWAL = parseFloat(import.meta.env.VITE_MIN_WITHDRAWAL || '0.50');
+import { MIN_WITHDRAWAL, REWARD_PER_AD } from '../config';
 
 const Earn = () => {
   const navigate = useNavigate();
@@ -149,7 +149,7 @@ const Earn = () => {
             </div>
             <div>
               <div className="font-bold text-white text-sm">1. Watch ads</div>
-              <div className="text-primary text-[11px] font-bold mt-0.5">0.015 TON per task</div>
+              <div className="text-primary text-[11px] font-bold mt-0.5">{REWARD_PER_AD} TON per task</div>
             </div>
           </div>
           <div className="bg-[#0088CC]/20 text-[#0088CC] px-2.5 py-1 rounded-md text-[10px] font-extrabold">
@@ -269,7 +269,7 @@ const Earn = () => {
       {/* STATS STRIP */}
       <div className="grid grid-cols-3 gap-2 mb-6">
         <div className="bg-cardbg border border-cardborder rounded-lg p-3 text-center">
-          <div className="text-white text-sm font-extrabold mb-1">0.015</div>
+          <div className="text-white text-sm font-extrabold mb-1">{REWARD_PER_AD}</div>
           <div className="text-textmuted text-[9px] font-bold uppercase">TON / Task</div>
         </div>
         <div className="bg-cardbg border border-cardborder rounded-lg p-3 text-center">

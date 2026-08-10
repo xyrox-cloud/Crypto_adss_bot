@@ -1,0 +1,1019 @@
+diff --git a/README.md b/README.md
+index f7bdbc4..681e48b 100644
+--- a/README.md
++++ b/README.md
+@@ -1,6 +1,6 @@
+ # 🚀 AdShare — Tasks & Rewards
+ 
+-A full-stack Telegram Mini App where users watch rewarded ads and earn USDT, with 60/40 revenue sharing between users and the platform.
++A full-stack Telegram Mini App where users watch rewarded ads and earn TON, with 60/40 revenue sharing between users and the platform.
+ 
+ ## 📁 Project Structure
+ 
+@@ -43,10 +43,10 @@ npm run dev
+ 
+ ## 💡 Revenue Model
+ Per ad watched:
+-- User earns:      60% of AD_REWARD_USDT (default $0.006)
+-- Platform keeps:  40% of AD_REWARD_USDT (default $0.004)
++- User earns:      60% of AD_REWARD_TON (default 0.0006)
++- Platform keeps:  40% of AD_REWARD_TON (default 0.0004)
+ 
+-Withdrawals are manual — admin sends USDT via Binance, marks paid in dashboard.
++Withdrawals are manual — admin sends TON via Tonkeeper, marks paid in dashboard.
+ 
+ ## 🌐 Admin Panel
+ Access at http://localhost:3001/admin (or your domain /admin)
+diff --git a/backend/.env.example b/backend/.env.example
+index a8c02bf..f8ae233 100644
+--- a/backend/.env.example
++++ b/backend/.env.example
+@@ -13,14 +13,14 @@ BOT_TOKEN=your_telegram_bot_token_here
+ DB_PATH=./data/adshare.db
+ 
+ # Per-ad reward in USDT (user gets 60%, platform keeps 40%)
+-AD_REWARD_USDT=0.01
++AD_REWARD_TON=0.001
+ 
+ # Rate limits
+ MAX_ADS_PER_DAY=20
+ MAX_ADS_PER_HOUR=5
+ 
+ # Minimum withdrawal amount in USDT
+-MIN_WITHDRAWAL=2.00
++MIN_WITHDRAWAL=0.50
+ 
+ # Frontend URL for CORS
+ FRONTEND_URL=http://localhost:5173
+diff --git a/backend/migrations/migrate_usdt_to_ton.js b/backend/migrations/migrate_usdt_to_ton.js
+new file mode 100644
+index 0000000..da73b62
+--- /dev/null
++++ b/backend/migrations/migrate_usdt_to_ton.js
+@@ -0,0 +1,49 @@
++const Database = require('better-sqlite3');
++const path = require('path');
++
++const dbPath = path.join(__dirname, '../data/adshare.db');
++const db = new Database(dbPath);
++
++const RATE = 6.0; // 1 TON = 6 USDT -> so TON amount = USDT amount / 6
++
++console.log('Starting USDT to TON database migration...');
++
++const tx = db.transaction(() => {
++  // Update users balances
++  db.prepare('UPDATE users SET balance = balance / ?, total_earned = total_earned / ?').run(RATE, RATE);
++  
++  // Update ad_watches
++  db.prepare('UPDATE ad_watches SET reward_amount = reward_amount / ?, platform_cut = platform_cut / ?').run(RATE, RATE);
++  
++  // Update withdrawals
++  db.prepare('UPDATE withdrawals SET amount = amount / ?').run(RATE);
++  
++  // Update platform_revenue
++  db.prepare('UPDATE platform_revenue SET amount = amount / ?').run(RATE);
++  
++  // Update ad_rewards
++  db.prepare('UPDATE ad_rewards SET amount = amount / ?').run(RATE);
++  
++  // Update settings for defaults if they exist
++  // We'll reset reward_per_ad and min_withdrawal specifically if they match old defaults
++  const settings = db.prepare('SELECT * FROM settings').all();
++  for (const s of settings) {
++    if (['reward_per_ad', 'min_withdrawal', 'daily_bonus_amount', 'minigame_min_reward', 'minigame_max_reward', 'referral_bonus'].includes(s.key)) {
++      const val = parseFloat(s.value);
++      if (!isNaN(val)) {
++        db.prepare('UPDATE settings SET value = ? WHERE key = ?').run((val / RATE).toFixed(5), s.key);
++      }
++      
++      // Update description text from USDT to TON
++      const newDesc = s.description ? s.description.replace(/USDT/g, 'TON') : s.description;
++      db.prepare('UPDATE settings SET description = ? WHERE key = ?').run(newDesc, s.key);
++    }
++  }
++});
++
++try {
++  tx();
++  console.log('Migration completed successfully.');
++} catch (e) {
++  console.error('Migration failed:', e);
++}
+diff --git a/backend/migrations/reset_balances.js b/backend/migrations/reset_balances.js
+new file mode 100644
+index 0000000..9dda829
+--- /dev/null
++++ b/backend/migrations/reset_balances.js
+@@ -0,0 +1,56 @@
++const Database = require('better-sqlite3');
++const path = require('path');
++
++const dbPath = path.join(__dirname, '../data/adshare.db');
++const db = new Database(dbPath);
++
++console.log('Starting full database reset to 0...');
++
++const tx = db.transaction(() => {
++  // 1. Reset Users Table (Balances and Leaderboards)
++  const userResult = db.prepare(`
++    UPDATE users SET 
++      balance = 0.0,
++      total_earned = 0.0,
++      total_ads_watched = 0,
++      blitz_rounds = 0,
++      top_score = 0,
++      total_score_today = 0,
++      all_time_score = 0,
++      blitz_rounds_today = 0,
++      quest_rounds_claimed = 0,
++      quest_score_claimed = 0,
++      quest_grinder_claimed = 0,
++      referral_count = 0,
++      daily_streak = 0,
++      last_daily_claim = NULL,
++      last_minigame_claim = NULL,
++      last_scratch_claim = NULL,
++      referral_bonus_paid = 0
++  `).run();
++  
++  console.log(`Reset users table - Rows affected: ${userResult.changes}`);
++
++  // 2. Clear Economy/History Tables
++  const wResult = db.prepare('DELETE FROM withdrawals').run();
++  console.log(`Cleared withdrawals - Rows affected: ${wResult.changes}`);
++
++  const awResult = db.prepare('DELETE FROM ad_watches').run();
++  console.log(`Cleared ad_watches - Rows affected: ${awResult.changes}`);
++
++  const arResult = db.prepare('DELETE FROM ad_rewards').run();
++  console.log(`Cleared ad_rewards - Rows affected: ${arResult.changes}`);
++
++  const prResult = db.prepare('DELETE FROM platform_revenue').run();
++  console.log(`Cleared platform_revenue - Rows affected: ${prResult.changes}`);
++
++  const logResult = db.prepare('DELETE FROM activity_log').run();
++  console.log(`Cleared activity_log - Rows affected: ${logResult.changes}`);
++});
++
++try {
++  tx();
++  console.log('Database reset completed successfully. The economy is now completely fresh.');
++} catch (e) {
++  console.error('Database reset failed:', e);
++}
+diff --git a/backend/public/admin.html b/backend/public/admin.html
+index 05a6ae9..fbc5a65 100644
+--- a/backend/public/admin.html
++++ b/backend/public/admin.html
+@@ -3,7 +3,7 @@
+ <head>
+   <meta charset="UTF-8" />
+   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+-  <title>AdShare Admin Panel</title>
++  <title>Admin - AdShare (TON)</title>
+   <style>
+     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+ 
+@@ -403,8 +403,8 @@
+               <tr>
+                 <th>ID</th>
+                 <th>User</th>
+-                <th>Amount (USDT)</th>
+-                <th>Wallet (BEP20)</th>
++                <th>Amount (TON)</th>
++                <th>Wallet (TON)</th>
+                 <th>Status</th>
+                 <th>Requested</th>
+                 <th>Actions</th>
+@@ -436,7 +436,7 @@
+                 <th>Telegram ID</th>
+                 <th>Username</th>
+                 <th>Name</th>
+-                <th>Balance (USDT)</th>
++                <th>Balance (TON)</th>
+                 <th>Total Earned</th>
+                 <th>Joined</th>
+               </tr>
+@@ -674,13 +674,13 @@
+         <div class="stat-card">
+           <div class="stat-icon">💰</div>
+           <div class="stat-label">Platform Revenue (40%)</div>
+-          <div class="stat-value text-accent">$${fmtUsdt(stats.platform_cut_total)}</div>
+-          <div class="stat-sub">USDT total</div>
++          <div class="stat-value text-accent">${fmtUsdt(stats.platform_cut_total)}</div>
++          <div class="stat-sub">TON total</div>
+         </div>
+         <div class="stat-card">
+           <div class="stat-icon">💸</div>
+           <div class="stat-label">Total Paid Out</div>
+-          <div class="stat-value text-success">$${fmtUsdt(stats.total_paid)}</div>
++          <div class="stat-value text-success">${fmtUsdt(stats.total_paid)}</div>
+           <div class="stat-sub">To users</div>
+         </div>
+         <div class="stat-card">
+@@ -692,7 +692,7 @@
+         <div class="stat-card">
+           <div class="stat-icon">🏦</div>
+           <div class="stat-label">Total Revenue</div>
+-          <div class="stat-value">$${fmtUsdt(stats.total_revenue)}</div>
++          <div class="stat-value">${fmtUsdt(stats.total_revenue)}</div>
+           <div class="stat-sub">Gross platform income</div>
+         </div>
+       `;
+@@ -718,7 +718,7 @@
+             <strong>@${w.username || 'unknown'}</strong><br/>
+             <span class="text-muted mono">${w.telegram_id}</span>
+           </td>
+-          <td><strong class="text-accent">$${fmtUsdt(w.amount)}</strong></td>
++          <td><strong class="text-accent">${fmtUsdt(w.amount)}</strong></td>
+           <td>
+             <span class="mono" title="${w.wallet_address}">${truncate(w.wallet_address, 20)}</span>
+             <button class="btn btn-sm" style="background:none;color:var(--muted);padding:2px 4px" onclick="copyText('${w.wallet_address}')" title="Copy wallet">📋</button>
+@@ -778,8 +778,8 @@
+           <td class="mono text-muted">${u.telegram_id}</td>
+           <td>${u.username ? `@${u.username}` : '<span class="text-muted">—</span>'}</td>
+           <td>${u.first_name || '<span class="text-muted">—</span>'}</td>
+-          <td><strong class="text-accent">$${fmtUsdt(u.balance)}</strong></td>
+-          <td class="text-muted">$${fmtUsdt(u.total_earned)}</td>
++          <td><strong class="text-accent">${fmtUsdt(u.balance)}</strong></td>
++          <td class="text-muted">${fmtUsdt(u.total_earned)}</td>
+           <td class="text-muted">${fmtDate(u.created_at)}</td>
+         </tr>
+       `).join('');
+diff --git a/backend/src/db/database.js b/backend/src/db/database.js
+index f0c457a..ab86953 100644
+--- a/backend/src/db/database.js
++++ b/backend/src/db/database.js
+@@ -154,17 +154,17 @@ function initDb() {
+   // Seed default settings if not present
+   const seedSettings = db.prepare(`INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)`);
+   const seedMany = db.transaction(() => {
+-    seedSettings.run('reward_per_ad',      process.env.AD_REWARD_USDT   || '0.01',  'USDT paid out per ad watched (user + platform share combined)');
++    seedSettings.run('reward_per_ad',      process.env.AD_REWARD_TON    || '0.001',  'TON paid out per ad watched (user + platform share combined)');
+     seedSettings.run('platform_cut_pct',   '40',                                     'Platform keeps this % of each ad reward');
+     seedSettings.run('revenue_split',      '60',                                     'User % cut of the ad reward');
+     seedSettings.run('max_ads_per_day',    process.env.MAX_ADS_PER_DAY  || '20',    'Max ads a user can watch per calendar day');
+     seedSettings.run('max_ads_per_hour',   process.env.MAX_ADS_PER_HOUR || '5',     'Max ads a user can watch per hour');
+-    seedSettings.run('min_withdrawal',     process.env.MIN_WITHDRAWAL   || '2.00',  'Minimum USDT amount for a withdrawal request');
++    seedSettings.run('min_withdrawal',     process.env.MIN_WITHDRAWAL   || '0.50',  'Minimum TON amount for a withdrawal request');
+     seedSettings.run('ad_cooldown_secs',   '30',                                     'Seconds a user must wait between ad watches');
+-    seedSettings.run('daily_bonus_amount', '0.001',                                  'USDT amount for daily check-in bonus');
+-    seedSettings.run('minigame_min_reward','0.001',                                  'Minimum USDT reward for daily minigame');
+-    seedSettings.run('minigame_max_reward','0.005',                                  'Maximum USDT reward for daily minigame');
+-    seedSettings.run('referral_bonus',     '0.005',                                  'One-time USDT bonus for referring a user who completes an action');
++    seedSettings.run('daily_bonus_amount', '0.0001',                                 'TON amount for daily check-in bonus');
++    seedSettings.run('minigame_min_reward','0.0001',                                 'Minimum TON reward for daily minigame');
++    seedSettings.run('minigame_max_reward','0.0005',                                 'Maximum TON reward for daily minigame');
++    seedSettings.run('referral_bonus',     '0.0005',                                 'One-time TON bonus for referring a user who completes an action');
+   });
+   seedMany();
+ }
+@@ -226,7 +226,7 @@ function processReferralBonus(db, user, ipAddress) {
+     // Record activity
+     db.prepare(`
+       INSERT INTO activity_log (action, details) VALUES (?, ?)
+-    `).run('referral_bonus_granted', `Referrer ${referrer.telegram_id} earned ${bonusAmount} USDT for referring ${user.telegram_id}`);
++    `).run('referral_bonus_granted', `Referrer ${referrer.telegram_id} earned ${bonusAmount} TON for referring ${user.telegram_id}`);
+   });
+   
+   try {
+diff --git a/backend/src/routes/admin.js b/backend/src/routes/admin.js
+index 189db88..6809ece 100644
+--- a/backend/src/routes/admin.js
++++ b/backend/src/routes/admin.js
+@@ -17,13 +17,12 @@ function generatePayoutMessage(amount, userIdentifier, walletAddress, txHash = n
+     : walletAddress;
+   
+   let msg = `✅ <b>PAYOUT SUCCESSFUL</b>\n\n`;
+-  msg += `💰 <b>Amount:</b> ${parseFloat(amount).toFixed(2)} USDT\n`;
++  msg += `💰 <b>Amount:</b> ${parseFloat(amount).toFixed(4)} TON\n`;
+   msg += `👤 <b>User:</b> ${userIdentifier}\n`;
+-  msg += `🌐 <b>Network:</b> BEP20\n`;
+   msg += `📮 <b>To:</b> <code>${displayWallet}</code>\n`;
+   
+   if (txHash) {
+-    msg += `🔍 <b>Tx:</b> <a href="https://bscscan.com/tx/${txHash}">${txHash}</a>`;
++    msg += `🔍 <b>Tx:</b> <a href="https://tonviewer.com/transaction/${txHash}">${txHash}</a>`;
+   }
+   
+   return msg;
+diff --git a/backend/src/routes/ads.js b/backend/src/routes/ads.js
+index d3862c8..dc9f232 100644
+--- a/backend/src/routes/ads.js
++++ b/backend/src/routes/ads.js
+@@ -42,7 +42,8 @@ router.get('/reward', rewardLimiter, (req, res) => {
+     // 3. Read live settings from DB
+     const settings = getSettings();
+     const maxAdsPerDay    = Math.floor(settings.max_ads_per_day  ?? 20);
+-    const rewardUsdt      = parseFloat(settings.reward_per_ad    ?? 0.01);
++    const sharedConfig    = require('../../../config.json');
++    const rewardUsdt      = sharedConfig.REWARD_PER_AD;
+     
+     // Fetch revenue_split or calculate from platform_cut_pct
+     const userSplitPct    = parseFloat(settings.revenue_split ?? (100 - parseFloat(settings.platform_cut_pct ?? 40)));
+@@ -119,7 +120,7 @@ router.get('/reward', rewardLimiter, (req, res) => {
+ 
+       db.prepare(`
+         INSERT INTO activity_log (action, details) VALUES (?, ?)
+-      `).run('ad_reward_granted', `User ${telegramId} earned ${userShare} USDT`);
++      `).run('ad_reward_granted', `User ${telegramId} earned ${userShare} TON`);
+ 
+       return watchInfo.lastInsertRowid;
+     });
+diff --git a/backend/src/routes/users.js b/backend/src/routes/users.js
+index 92bfd98..9b685e7 100644
+--- a/backend/src/routes/users.js
++++ b/backend/src/routes/users.js
+@@ -331,7 +331,7 @@ router.post('/daily-claim', extractTelegramUser, (req, res) => {
+ 
+       db.prepare(`
+         INSERT INTO activity_log (action, details) VALUES (?, ?)
+-      `).run('daily_bonus_granted', `User ${telegramId} claimed daily bonus ${rewardUsdt} USDT. Streak: ${newStreak}`);
++      `).run('daily_bonus_granted', `User ${telegramId} claimed daily bonus ${rewardUsdt} TON. Streak: ${newStreak}`);
+     });
+ 
+     tx();
+@@ -411,7 +411,7 @@ router.post('/minigame-claim', extractTelegramUser, (req, res) => {
+ 
+       db.prepare(`
+         INSERT INTO activity_log (action, details) VALUES (?, ?)
+-      `).run('minigame_reward_granted', `User ${telegramId} won minigame reward ${rewardUsdt} USDT.`);
++      `).run('minigame_reward_granted', `User ${telegramId} won minigame reward ${rewardUsdt} TON.`);
+     });
+ 
+     tx();
+@@ -486,7 +486,7 @@ router.post('/scratch-claim', extractTelegramUser, (req, res) => {
+ 
+       db.prepare(`
+         INSERT INTO activity_log (action, details) VALUES (?, ?)
+-      `).run('scratch_reward_granted', `User ${telegramId} won scratch reward ${rewardUsdt} USDT.`);
++      `).run('scratch_reward_granted', `User ${telegramId} won scratch reward ${rewardUsdt} TON.`);
+     });
+ 
+     tx();
+diff --git a/backend/src/routes/withdrawals.js b/backend/src/routes/withdrawals.js
+index 2cb676e..87f320f 100644
+--- a/backend/src/routes/withdrawals.js
++++ b/backend/src/routes/withdrawals.js
+@@ -11,17 +11,17 @@ router.post('/request', extractTelegramUser, (req, res) => {
+     const { amount, wallet_address } = req.body;
+     const ipAddress = req.ip || req.connection?.remoteAddress;
+ 
+-    // Read live settings
+-    const settings = getSettings();
+-    const minWithdrawal = parseFloat(settings.min_withdrawal ?? 2.00);
++    // Read from shared config
++    const sharedConfig = require('../../../config.json');
++    const minWithdrawal = sharedConfig.MIN_WITHDRAWAL;
+ 
+-    if (!wallet_address || !/^0x[a-fA-F0-9]{40}$/.test(wallet_address)) {
+-      return res.status(400).json({ error: 'Invalid wallet address (must be a valid BEP20 address)' });
++    if (!wallet_address || !/^(EQ|UQ)[a-zA-Z0-9_-]{46}$/.test(wallet_address)) {
++      return res.status(400).json({ error: 'Invalid wallet address (must be a valid TON address)' });
+     }
+ 
+     const withdrawAmount = parseFloat(amount);
+     if (isNaN(withdrawAmount) || withdrawAmount < minWithdrawal) {
+-      return res.status(400).json({ error: `Minimum withdrawal amount is $${minWithdrawal} USDT` });
++      return res.status(400).json({ error: `Minimum withdrawal amount is ${minWithdrawal} TON` });
+     }
+ 
+     const user = db.prepare('SELECT id, balance, banned FROM users WHERE telegram_id = ?').get(telegramId);
+diff --git a/bot/src/bot.js b/bot/src/bot.js
+index 923a5c9..59af709 100644
+--- a/bot/src/bot.js
++++ b/bot/src/bot.js
+@@ -118,7 +118,7 @@ bot.command('withdraw', async (ctx) => {
+     return;
+   }
+   
+-  if (balance < 2) {
++  if (balance < 0.5) {
+     await ctx.reply(messages.withdrawInsufficient(), {
+       ...Markup.inlineKeyboard([
+         [Markup.button.webApp('🚀 Open AdShare App', MINI_APP_URL)]
+diff --git a/bot/src/messages.js b/bot/src/messages.js
+index 907e1c0..a9f00f4 100644
+--- a/bot/src/messages.js
++++ b/bot/src/messages.js
+@@ -1,12 +1,12 @@
+ module.exports = {
+-  welcome: (firstName) => `Hello, ${firstName}! 👋\n\nWelcome to AdShare — Tasks & Rewards. Here you can complete daily tasks and earn real USDT seamlessly.\nClick below to open the Mini App and start earning!`,
++  welcome: (firstName) => `Hello, ${firstName}! 👋\n\nWelcome to AdShare — Tasks & Rewards. Here you can complete daily tasks and earn real TON seamlessly.\nClick below to open the Mini App and start earning!`,
+   
+-  balance: (balance) => `💰 Your current balance is: *${balance.toFixed(2)} USDT*`,
++  balance: (balance) => `💰 Your current balance is: *${balance.toFixed(4)} TON*`,
+   
+   balanceError: () => `❌ Sorry, we couldn't fetch your balance right now. Please try again later.`,
+   
+ 
+-  withdrawInsufficient: () => `Your balance is below the minimum withdrawal amount of 2 USDT. Keep completing tasks to earn more!`,
++  withdrawInsufficient: () => `Your balance is below the minimum withdrawal amount of 0.5 TON. Keep completing tasks to earn more!`,
+   
+   withdrawApp: () => `Please open the AdShare Mini App to process your withdrawal request.`,
+   
+diff --git a/config.json b/config.json
+new file mode 100644
+index 0000000..97afdcc
+--- /dev/null
++++ b/config.json
+@@ -0,0 +1,4 @@
++{
++  "MIN_WITHDRAWAL": 5.0,
++  "REWARD_PER_AD": 0.01
++}
+diff --git a/frontend/index.html b/frontend/index.html
+index 872c296..9c5fa0b 100644
+--- a/frontend/index.html
++++ b/frontend/index.html
+@@ -4,7 +4,7 @@
+     <meta charset="UTF-8" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+     <title>AdShare — Tasks & Rewards</title>
+-    <meta name="description" content="Complete daily tasks and earn real USDT on Telegram. Withdraw directly to your BEP20 wallet." />
++    <meta name="description" content="Complete daily tasks and earn real TON on Telegram. Withdraw directly to your TON wallet." />
+     <link rel="preconnect" href="https://fonts.googleapis.com" />
+     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+diff --git a/frontend/src/admin/pages/AdminDashboard.jsx b/frontend/src/admin/pages/AdminDashboard.jsx
+index 4299e1a..a44f9fd 100644
+--- a/frontend/src/admin/pages/AdminDashboard.jsx
++++ b/frontend/src/admin/pages/AdminDashboard.jsx
+@@ -78,15 +78,15 @@ export default function AdminDashboard() {
+       <div className="admin-stats-grid" style={{ marginBottom: 24 }}>
+         <StatCard
+           label="Platform Revenue (40%)"
+-          value={`$${fmt(stats.total_revenue, 4)}`}
++          value={`${fmt(stats.total_revenue, 4)}`}
+           variant="gold"
+-          sub="USDT"
++          sub="TON"
+         />
+         <StatCard
+           label="Total Paid Out"
+-          value={`$${fmt(stats.total_paid_out, 4)}`}
++          value={`${fmt(stats.total_paid_out, 4)}`}
+           variant="success"
+-          sub="USDT"
++          sub="TON"
+         />
+       </div>
+ 
+@@ -98,7 +98,7 @@ export default function AdminDashboard() {
+         <StatCard
+           label="Pending Requests"
+           value={fmtN(stats.pending_withdrawals_count)}
+-          sub={stats.pending_withdrawals_amount > 0 ? `$${fmt(stats.pending_withdrawals_amount, 4)} USDT pending` : null}
++          sub={stats.pending_withdrawals_amount > 0 ? `${fmt(stats.pending_withdrawals_amount, 4)} TON pending` : null}
+           variant={stats.pending_withdrawals_count > 0 ? 'warn' : ''}
+           highlight={stats.pending_withdrawals_count > 0}
+         />
+diff --git a/frontend/src/admin/pages/AdminSettings.jsx b/frontend/src/admin/pages/AdminSettings.jsx
+index fa044ca..ecb1931 100644
+--- a/frontend/src/admin/pages/AdminSettings.jsx
++++ b/frontend/src/admin/pages/AdminSettings.jsx
+@@ -5,9 +5,9 @@ import ConfirmModal from '../ConfirmModal';
+ 
+ const SETTING_META = {
+   reward_per_ad: {
+-    label: 'Reward Per Ad (USDT)',
+-    desc: 'Total USDT value of one ad watch. Platform cut + user share must sum to this.',
+-    unit: 'USDT',
++    label: 'Reward Per Ad (TON)',
++    desc: 'Total TON value of one ad watch. Platform cut + user share must sum to this.',
++    unit: 'TON',
+     step: '0.0001',
+     min: '0.0001',
+   },
+@@ -27,9 +27,9 @@ const SETTING_META = {
+     min: '1',
+   },
+   min_withdrawal: {
+-    label: 'Minimum Withdrawal (USDT)',
++    label: 'Minimum Withdrawal (TON)',
+     desc: 'Users must accumulate at least this much before they can withdraw.',
+-    unit: 'USDT',
++    unit: 'TON',
+     step: '0.01',
+     min: '0.01',
+   },
+@@ -165,7 +165,7 @@ export default function AdminSettings() {
+             <div>
+               <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Per ad (gross)</div>
+               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 18, color: 'var(--text-primary)', fontWeight: 700 }}>
+-                ${rewardPerAd.toFixed(5)} USDT
++                ${rewardPerAd.toFixed(5)} TON
+               </div>
+             </div>
+             <div>
+diff --git a/frontend/src/admin/pages/AdminUsers.jsx b/frontend/src/admin/pages/AdminUsers.jsx
+index 2b2e0bf..96966ea 100644
+--- a/frontend/src/admin/pages/AdminUsers.jsx
++++ b/frontend/src/admin/pages/AdminUsers.jsx
+@@ -47,7 +47,7 @@ export default function AdminUsers() {
+     const delta = parseFloat(vals.delta);
+     if (isNaN(delta)) throw new Error('Enter a valid number');
+     await adjustBalance(modal.user.id, { delta, reason: vals.reason });
+-    toast(`Balance adjusted by ${delta >= 0 ? '+' : ''}${delta.toFixed(4)} USDT`, 'success');
++    toast(`Balance adjusted by ${delta >= 0 ? '+' : ''}${delta.toFixed(4)} TON`, 'success');
+     setModal(null);
+     load(pagination.page);
+   };
+@@ -171,7 +171,7 @@ export default function AdminUsers() {
+           title={`Adjust Balance — ${modal.user.username ? '@' + modal.user.username : modal.user.first_name}`}
+           description={
+             <>
+-              Current balance: <strong style={{ color: 'var(--gold)', fontFamily: 'var(--font-mono)' }}>{fmtMoney(modal.user.balance)} USDT</strong>
++              Current balance: <strong style={{ color: 'var(--gold)', fontFamily: 'var(--font-mono)' }}>{fmtMoney(modal.user.balance)} TON</strong>
+               <br />Enter a positive number to add, negative to deduct. A mandatory reason will be logged.
+             </>
+           }
+@@ -179,7 +179,7 @@ export default function AdminUsers() {
+           onConfirm={handleBalanceAdjust}
+           onCancel={() => setModal(null)}
+           extraFields={[
+-            { key: 'delta', label: 'Delta (USDT)', placeholder: 'e.g. 0.50 or -0.25', type: 'number', step: '0.0001', required: true },
++            { key: 'delta', label: 'Delta (TON)', placeholder: 'e.g. 0.50 or -0.25', type: 'number', step: '0.0001', required: true },
+             { key: 'reason', label: 'Reason', placeholder: 'Support case #, dispute details…', type: 'textarea', required: true },
+           ]}
+         />
+diff --git a/frontend/src/admin/pages/AdminWithdrawals.jsx b/frontend/src/admin/pages/AdminWithdrawals.jsx
+index 06254ff..976377f 100644
+--- a/frontend/src/admin/pages/AdminWithdrawals.jsx
++++ b/frontend/src/admin/pages/AdminWithdrawals.jsx
+@@ -186,11 +186,11 @@ export default function AdminWithdrawals() {
+           description={
+             modal.action === 'approve'
+               ? <>
+-                  Confirm that you have <strong>manually sent ${Number(modal.row.amount).toFixed(4)} USDT</strong> to wallet <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--accent)', wordBreak: 'break-all' }}>{modal.row.wallet_address}</code>.<br /><br />
++                  Confirm that you have <strong>manually sent {Number(modal.row.amount).toFixed(4)} TON</strong> to wallet <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--accent)', wordBreak: 'break-all' }}>{modal.row.wallet_address}</code>.<br /><br />
+                   This will mark the withdrawal as <strong>Paid</strong> and record the timestamp.
+                 </>
+               : <>
+-                  This will <strong>reject</strong> withdrawal #{modal.row.id} and <strong>refund ${Number(modal.row.amount).toFixed(4)} USDT</strong> back to the user's balance.
++                  This will <strong>reject</strong> withdrawal #{modal.row.id} and <strong>refund {Number(modal.row.amount).toFixed(4)} TON</strong> back to the user's balance.
+                 </>
+           }
+           confirmLabel={modal.action === 'approve' ? '✓ Confirm Paid' : '✕ Reject & Refund'}
+diff --git a/frontend/src/components/ScratchCard.jsx b/frontend/src/components/ScratchCard.jsx
+index e742a84..a178327 100644
+--- a/frontend/src/components/ScratchCard.jsx
++++ b/frontend/src/components/ScratchCard.jsx
+@@ -26,7 +26,7 @@ const ScratchCard = ({ onComplete }) => {
+         setResult(data);
+         
+         if (data.reward > 0) {
+-          showToast(`You won ${data.reward} USDT!`, 'success');
++          showToast(`You won ${data.reward} TON!`, 'success');
+         } else {
+           showToast(data.message || 'Better luck next time!', 'info');
+         }
+@@ -54,7 +54,7 @@ const ScratchCard = ({ onComplete }) => {
+               {result.reward > 0 ? (
+                 <>
+                   <div className="text-3xl mb-1">🎉</div>
+-                  <div className="text-xl font-extrabold text-success">{result.reward} USDT</div>
++                  <div className="text-xl font-extrabold text-success">{result.reward} TON</div>
+                 </>
+               ) : (
+                 <>
+diff --git a/frontend/src/components/SpinWheel.jsx b/frontend/src/components/SpinWheel.jsx
+index c3fff37..a95ec5c 100644
+--- a/frontend/src/components/SpinWheel.jsx
++++ b/frontend/src/components/SpinWheel.jsx
+@@ -43,7 +43,7 @@ const SpinWheel = ({ onComplete }) => {
+         setIsSpinning(false);
+         setResult(data);
+         if (data.reward > 0) {
+-          showToast(`You won ${data.reward} USDT!`, 'success');
++          showToast(`You won ${data.reward} TON!`, 'success');
+         } else {
+           showToast(data.message || 'Better luck next time!', 'info');
+         }
+@@ -94,7 +94,7 @@ const SpinWheel = ({ onComplete }) => {
+ 
+       {result !== null && (
+         <div className={`mt-4 text-center font-bold animate-pulse ${result.reward > 0 ? 'text-success' : 'text-textmuted'}`}>
+-          {result.reward > 0 ? `You won ${result.reward} USDT!` : (result.message || 'Better luck next time!')}
++          {result.reward > 0 ? `You won ${result.reward} TON!` : (result.message || 'Better luck next time!')}
+         </div>
+       )}
+     </div>
+diff --git a/frontend/src/config.js b/frontend/src/config.js
+new file mode 100644
+index 0000000..c8e8ef8
+--- /dev/null
++++ b/frontend/src/config.js
+@@ -0,0 +1,4 @@
++import sharedConfig from '../../config.json';
++
++export const MIN_WITHDRAWAL = sharedConfig.MIN_WITHDRAWAL;
++export const REWARD_PER_AD = sharedConfig.REWARD_PER_AD;
+diff --git a/frontend/src/pages/About.jsx b/frontend/src/pages/About.jsx
+index f337690..8c5b3f0 100644
+--- a/frontend/src/pages/About.jsx
++++ b/frontend/src/pages/About.jsx
+@@ -10,14 +10,14 @@ const About = () => {
+         <button onClick={() => navigate('/menu')} className="text-black/70 hover:text-black font-bold text-sm mb-4">← Back</button>
+         <h1 className="text-3xl font-extrabold uppercase leading-none">AdShare — Tasks & Rewards</h1>
+         <p className="text-black/70 font-mono text-sm mt-1">Version 1.0.0</p>
+-        <p className="mt-4 font-bold">"Complete daily tasks and earn real USDT on Telegram"</p>
++        <p className="mt-4 font-bold">"Complete daily tasks and earn real TON on Telegram"</p>
+       </div>
+ 
+       <div className="px-4">
+         <h3 className="text-secondary font-bold uppercase mb-3 text-sm pl-2">How it stays free</h3>
+         <div className="bg-cardbg border border-cardborder p-5 rounded-3xl">
+           <p className="text-white/80 leading-relaxed text-sm mb-6">
+-            AdShare rewards you for daily check-ins, completing tasks, and (optionally) watching ads. When you choose to watch an ad, the advertiser pays us, and we share <strong className="text-white">60% of that revenue</strong> directly back to you in USDT. The remaining 40% covers server costs, transaction fees, and keeps the app running smoothly — with no hidden costs.
++            AdShare rewards you for daily check-ins, completing tasks, and (optionally) watching ads. When you choose to watch an ad, the advertiser pays us, and we share <strong className="text-white">60% of that revenue</strong> directly back to you in TON. The remaining 40% covers server costs, transaction fees, and keeps the app running smoothly — with no hidden costs.
+           </p>
+           
+           <div className="flex flex-wrap items-center justify-center gap-2 text-secondary text-sm font-bold">
+diff --git a/frontend/src/pages/Earn.jsx b/frontend/src/pages/Earn.jsx
+index a4c962c..2c5b83e 100644
+--- a/frontend/src/pages/Earn.jsx
++++ b/frontend/src/pages/Earn.jsx
+@@ -7,7 +7,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
+ import { ChevronRight, Wallet, Users, Lock } from 'lucide-react';
+ 
+ const MAX_ADS_PER_DAY = parseInt(import.meta.env.VITE_MAX_ADS_PER_DAY || '20', 10);
+-const MIN_WITHDRAWAL = parseFloat(import.meta.env.VITE_MIN_WITHDRAWAL || '2.00');
++import { MIN_WITHDRAWAL, REWARD_PER_AD } from '../config';
+ 
+ const Earn = () => {
+   const navigate = useNavigate();
+@@ -50,7 +50,7 @@ const Earn = () => {
+           fetchStats();
+           return;
+         }
+-        showToast('Ad network not available. Try again later.', 'error');
++        showToast('❌ Ad network not available. Rewards will not be credited.', 'error');
+         return;
+       }
+ 
+@@ -96,7 +96,7 @@ const Earn = () => {
+         <div className="balance-label">Available Balance</div>
+         <div style={{ marginBottom: 6 }}>
+           <span className="balance-amount">{balance.toFixed(4)}</span>
+-          <span className="balance-currency">USDT</span>
++          <span className="balance-currency">TON</span>
+         </div>
+ 
+         {/* Progress bar toward minimum */}
+@@ -104,7 +104,7 @@ const Earn = () => {
+           <div style={{ marginTop: 14 }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6, fontFamily: 'var(--font-mono)' }}>
+               <span>Progress to minimum</span>
+-              <span>${balance.toFixed(4)} / ${MIN_WITHDRAWAL.toFixed(2)}</span>
++              <span>{balance.toFixed(4)} / {MIN_WITHDRAWAL.toFixed(2)} TON</span>
+             </div>
+             <div style={{ height: 5, borderRadius: 0, background: 'var(--border)', overflow: 'hidden' }}>
+               <div style={{
+@@ -116,7 +116,7 @@ const Earn = () => {
+               }} />
+             </div>
+             <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 6, textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
+-              ${(MIN_WITHDRAWAL - balance).toFixed(4)} more needed
++              {(MIN_WITHDRAWAL - balance).toFixed(4)} TON more needed
+             </div>
+           </div>
+         )}
+@@ -159,24 +159,19 @@ const Earn = () => {
+         >
+           <div className="flex justify-between items-center mb-3">
+             <div className="flex items-center gap-3">
+-              <div className="w-10 h-10 bg-white flex items-center justify-center relative shadow-sm">
+-                <svg width="24" height="24" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+-                  <path d="M100 0C44.7715 0 0 44.7715 0 100C0 155.228 44.7715 200 100 200C155.228 200 200 155.228 200 100C200 44.7715 155.228 0 100 0Z" fill="#26A17B"/>
+-                  <path d="M100 128.57C125.753 128.57 149.255 124.966 166.521 119.262V97.3595C149.255 103.064 125.753 106.667 100 106.667C74.2468 106.667 50.7453 103.064 33.4795 97.3595V119.262C50.7453 124.966 74.2468 128.57 100 128.57Z" fill="white"/>
+-                  <path d="M100 78.0963C126.974 78.0963 151.353 74.0205 169.567 67.5878V42.8574H116.536V62.4334C111.233 62.9067 105.714 63.1674 100 63.1674C94.2863 63.1674 88.7668 62.9067 83.4636 62.4334V42.8574H30.4326V67.5878C48.6465 74.0205 73.0255 78.0963 100 78.0963Z" fill="white"/>
+-                  <path d="M83.4639 171.428H116.536V117.412C111.233 118.067 105.714 118.423 100 118.423C94.2865 118.423 88.7671 118.067 83.4639 117.412V171.428Z" fill="white"/>
+-                </svg>
+-                <div className="absolute -bottom-1 -right-2 bg-[#F0B90B] text-black text-[8px] font-extrabold px-1 py-0.5 border-2 border-[#26A17B] shadow-sm">
+-                  BEP20
++              <div className="w-16 h-16 bg-white rounded-full flex flex-col items-center justify-center relative shadow-sm border-[3px] border-[#006699]">
++                <Play size={28} className="text-[#0088CC]" fill="currentColor" />
++                <div className="absolute -bottom-2 bg-[#0088CC] text-white text-[9px] font-extrabold px-2 py-0.5 rounded-md shadow-sm border border-white/20">
++                  TON
+                 </div>
+               </div>
+               <div>
+                 <h3 className="font-extrabold text-lg text-white uppercase leading-none">2. Extra: Watch Ads</h3>
+-                <div className="text-textmuted text-[10px] font-bold mt-1 uppercase">Earn USDT Directly</div>
++                <div className="text-textmuted text-[10px] font-bold mt-1 uppercase">Earn TON Directly</div>
+               </div>
+             </div>
+             <div className="text-primary text-[10px] font-bold bg-primary/10 border border-primary/20 px-2 py-1">
+-              $0.015 / AD
++              {REWARD_PER_AD} TON / AD
+             </div>
+           </div>
+           <div className="flex justify-between items-end mt-4">
+@@ -201,7 +196,7 @@ const Earn = () => {
+               <div>
+                 <h3 className="font-extrabold text-lg uppercase leading-none text-white">3. Withdraw</h3>
+                 <div className="text-textmuted text-[10px] font-bold mt-1 uppercase">
+-                  CASH OUT YOUR USDT
++                  CASH OUT YOUR TON
+                 </div>
+               </div>
+             </div>
+diff --git a/frontend/src/pages/History.jsx b/frontend/src/pages/History.jsx
+index b7090db..191f6c9 100644
+--- a/frontend/src/pages/History.jsx
++++ b/frontend/src/pages/History.jsx
+@@ -110,7 +110,7 @@ const History = () => {
+                 </div>
+                 <div className="tx-amount-col">
+                   <div className="tx-amount earn">+{Number(w.reward_amount || 0).toFixed(4)}</div>
+-                  <div className="tx-unit">USDT</div>
++                  <div className="tx-unit">TON</div>
+                 </div>
+               </div>
+             ))
+@@ -128,7 +128,7 @@ const History = () => {
+                   <ArrowDownIcon />
+                 </div>
+                 <div className="tx-info">
+-                  <div className="tx-title">{Number(w.amount || 0).toFixed(2)} USDT</div>
++                  <div className="tx-title">{Number(w.amount || 0).toFixed(2)} TON</div>
+                   <div className="tx-time">
+                     {relativeTime(w.requested_at)} · {w.wallet_address.slice(0, 6)}…{w.wallet_address.slice(-4)}
+                   </div>
+diff --git a/frontend/src/pages/Home.jsx b/frontend/src/pages/Home.jsx
+index 8546c6a..810ff99 100644
+--- a/frontend/src/pages/Home.jsx
++++ b/frontend/src/pages/Home.jsx
+@@ -83,7 +83,7 @@ const Home = () => {
+     setClaimingDaily(true);
+     try {
+       const res = await api.post('/users/daily-claim');
+-      showToast(`Daily bonus claimed! ${res.data.reward} USDT`, 'success');
++      showToast(`Daily bonus claimed! ${res.data.reward} TON`, 'success');
+       await refreshUser();
+     } catch (err) {
+       const msg = err.response?.data?.error || 'Failed to claim daily bonus';
+@@ -170,7 +170,7 @@ const Home = () => {
+       </div>
+ 
+       {/* THREE EARNING OPTIONS */}
+-      <h3 className="font-mono font-bold text-lg text-white tracking-wider mb-4 mt-6">EARN USDT</h3>
++      <h3 className="font-mono font-bold text-lg text-white tracking-wider mb-4 mt-6">EARN TON</h3>
+       
+       {/* 1. DAILY BONUS */}
+       <div className="bg-cardbg border border-cardborder rounded-3xl p-5 mb-4">
+@@ -181,7 +181,7 @@ const Home = () => {
+             </div>
+             <div>
+               <h3 className="font-bold text-lg leading-tight">Daily Bonus</h3>
+-              <div className="text-textmuted text-xs mt-0.5">Free USDT every 24h</div>
++              <div className="text-textmuted text-xs mt-0.5">Free TON every 24h</div>
+             </div>
+           </div>
+           <button 
+@@ -261,7 +261,7 @@ const Home = () => {
+               FREE
+             </div>
+             <h2 className="text-white font-extrabold text-2xl uppercase leading-none mb-1">PLAY & EARN</h2>
+-            <div className="text-white/90 text-xs font-bold">SPIN FOR DAILY USDT</div>
++            <div className="text-white/90 text-xs font-bold">SPIN FOR DAILY TON</div>
+           </div>
+         </div>
+         <ChevronRight size={24} className="text-white opacity-80" />
+@@ -282,7 +282,7 @@ const Home = () => {
+               FREE
+             </div>
+             <h2 className="text-white font-extrabold text-2xl uppercase leading-none mb-1">SCRATCH & WIN</h2>
+-            <div className="text-white/90 text-xs font-bold">REVEAL YOUR DAILY USDT</div>
++            <div className="text-white/90 text-xs font-bold">REVEAL YOUR DAILY TON</div>
+           </div>
+         </div>
+         <ChevronRight size={24} className="text-white opacity-80" />
+@@ -290,17 +290,17 @@ const Home = () => {
+ 
+       {/* 3. WATCH AD FOR EXTRA REWARD */}
+       <div 
+-        className="bg-[#26A17B] rounded-3xl p-5 mb-6 relative overflow-hidden" 
++        className="bg-[#0088CC] rounded-3xl p-5 mb-6 relative overflow-hidden" 
+         onClick={handleWatchAd}
+         role="button"
+       >
+         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none"></div>
+         
+         <div className="flex items-center gap-3 mb-4">
+-          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center relative shadow-sm border-2 border-[#1c7a5c]">
+-            <Play size={24} className="text-[#26A17B]" fill="currentColor" />
+-            <div className="absolute -bottom-1.5 -right-2 bg-[#F0B90B] text-black text-[8px] font-extrabold px-1.5 py-0.5 rounded-md shadow-sm border border-black/10">
+-              BEP20
++          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center relative shadow-sm border-2 border-[#006699]">
++            <Play size={24} className="text-[#0088CC]" fill="currentColor" />
++            <div className="absolute -bottom-1.5 -right-2 bg-[#0088CC] text-white text-[8px] font-extrabold px-1.5 py-0.5 rounded-md shadow-sm border border-white/20">
++              TON
+             </div>
+           </div>
+           <div>
+@@ -308,7 +308,7 @@ const Home = () => {
+               EXTRA REWARD
+             </div>
+             <h2 className="text-white font-extrabold text-2xl uppercase leading-none">WATCH AD</h2>
+-            <div className="text-white/90 text-[10px] font-bold mt-1 tracking-wide">EARN MORE USDT INSTANTLY</div>
++            <div className="text-white/90 text-[10px] font-bold mt-1 tracking-wide">EARN MORE TON INSTANTLY</div>
+           </div>
+         </div>
+ 
+@@ -319,7 +319,7 @@ const Home = () => {
+           </div>
+           <div className="text-right">
+             <div className="text-white/70 text-[10px] font-bold uppercase">Total Earned</div>
+-            <div className="text-white font-bold text-sm">${Number(stats.total_earned || 0).toFixed(4)}</div>
++            <div className="text-white font-bold text-sm">{Number(stats.total_earned || 0).toFixed(4)} TON</div>
+           </div>
+         </div>
+       </div>
+@@ -336,7 +336,7 @@ const Home = () => {
+             </button>
+             <div className="p-6 text-center">
+               <h2 className="text-2xl font-extrabold text-white uppercase mb-2">Daily Spin</h2>
+-              <p className="text-textmuted text-sm mb-6">Play once a day for a chance to win free USDT!</p>
++              <p className="text-textmuted text-sm mb-6">Play once a day for a chance to win free TON!</p>
+               <SpinWheel onComplete={() => setTimeout(() => setShowSpinWheel(false), 2000)} />
+             </div>
+           </div>
+@@ -355,7 +355,7 @@ const Home = () => {
+             </button>
+             <div className="p-6 text-center">
+               <h2 className="text-2xl font-extrabold text-white uppercase mb-2">Scratch & Win</h2>
+-              <p className="text-textmuted text-sm mb-6">Scratch once a day for a chance to win free USDT!</p>
++              <p className="text-textmuted text-sm mb-6">Scratch once a day for a chance to win free TON!</p>
+               <ScratchCard onComplete={() => setTimeout(() => setShowScratchCard(false), 2000)} />
+             </div>
+           </div>
+diff --git a/frontend/src/pages/Referrals.jsx b/frontend/src/pages/Referrals.jsx
+index eec32d0..0a929f2 100644
+--- a/frontend/src/pages/Referrals.jsx
++++ b/frontend/src/pages/Referrals.jsx
+@@ -35,10 +35,10 @@ const Referrals = () => {
+   const shareLink = () => {
+     if (window.Telegram?.WebApp?.openTelegramLink) {
+       window.Telegram.WebApp.openTelegramLink(
+-        `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent('Join me on AdShare and earn USDT by watching ads! 🚀')}`
++        `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent('Join me on AdShare and earn TON by watching ads! 🚀')}`
+       );
+     } else if (navigator.share) {
+-      navigator.share({ title: 'Join AdShare', text: 'Earn USDT by watching ads on Telegram!', url: refLink });
++      navigator.share({ title: 'Join AdShare', text: 'Earn TON by watching ads on Telegram!', url: refLink });
+     } else {
+       copyLink();
+     }
+diff --git a/frontend/src/pages/Support.jsx b/frontend/src/pages/Support.jsx
+index c1bbeff..6e0d6c1 100644
+--- a/frontend/src/pages/Support.jsx
++++ b/frontend/src/pages/Support.jsx
+@@ -123,7 +123,7 @@ const Support = () => {
+         />
+         <FAQItem 
+           question="What do I get for watching an ad?" 
+-          answer="You get a fixed amount of USDT added to your balance for each ad you watch (up to the daily limit). The exact amount depends on the current reward pool." 
++          answer="You get a fixed amount of TON added to your balance for each ad you watch (up to the daily limit). The exact amount depends on the current reward pool." 
+         />
+         <FAQItem 
+           question="I watched an ad but didn't get my reward — what do I do?" 
+@@ -139,7 +139,7 @@ const Support = () => {
+         />
+         <FAQItem 
+           question="How do withdrawals work?" 
+-          answer={`Once you reach the minimum withdrawal amount of $2.00, you can request a withdrawal to your BEP20 USDT wallet. Admins review and process payments manually.`} 
++          answer="Once you reach the minimum balance, enter your TON wallet address on the Withdraw page. Withdrawals are processed manually within 1-3 business days." 
+         />
+       </div>
+     </div>
+diff --git a/frontend/src/pages/Terms.jsx b/frontend/src/pages/Terms.jsx
+index b5e22b8..4291be8 100644
+--- a/frontend/src/pages/Terms.jsx
++++ b/frontend/src/pages/Terms.jsx
+@@ -9,7 +9,7 @@ const Terms = () => {
+       <h2 style={{ marginBottom: '20px', color: 'var(--accent)' }}>Terms of Service</h2>
+       <div style={{ lineHeight: '1.6', color: 'var(--text-main)', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+         <div><strong>1. App Usage:</strong> AdShare is a Telegram Mini App. Your account is tied to your Telegram ID. No password is required.</div>
+-        <div><strong>2. Real Currency:</strong> The USDT balance you see is real currency (not points), withdrawable on the BEP20 network once you reach the minimum withdrawal threshold.</div>
++        <div><strong>2. Real Currency:</strong> The TON balance you see is real currency (not points), withdrawable on the TON network once you reach the minimum withdrawal threshold.</div>
+         <div><strong>3. Fair Play Rules:</strong> The use of bots, scripts, autoclickers, or multi-accounting is strictly prohibited. Violators will be banned and forfeit all earnings.</div>
+         <div><strong>4. Availability:</strong> AdShare makes no guarantees about the constant availability of ads, which depend on third-party networks.</div>
+         <div><strong>5. Limitation of Liability:</strong> We are not liable for lost funds due to incorrect withdrawal addresses or account bans for TOS violations.</div>
+diff --git a/frontend/src/pages/Withdraw.jsx b/frontend/src/pages/Withdraw.jsx
+index 43f62a8..2768bdd 100644
+--- a/frontend/src/pages/Withdraw.jsx
++++ b/frontend/src/pages/Withdraw.jsx
+@@ -4,7 +4,7 @@ import { useToast } from '../context/ToastContext';
+ import { requestWithdrawal } from '../api/api';
+ import LoadingSpinner from '../components/LoadingSpinner';
+ 
+-const MIN_WITHDRAWAL = parseFloat(import.meta.env.VITE_MIN_WITHDRAWAL || '2.00');
++import { MIN_WITHDRAWAL } from '../config';
+ 
+ const Withdraw = () => {
+   const { user, refreshUser } = useUser();
+@@ -23,7 +23,7 @@ const Withdraw = () => {
+     const wAmount = parseFloat(amount);
+ 
+     if (isNaN(wAmount) || wAmount < MIN_WITHDRAWAL) {
+-      showToast(`Minimum withdrawal is $${MIN_WITHDRAWAL.toFixed(2)} USDT`, 'error');
++      showToast(`Minimum withdrawal is ${MIN_WITHDRAWAL.toFixed(4)} TON`, 'error');
+       return;
+     }
+     if (wAmount > balance) {
+@@ -59,7 +59,7 @@ const Withdraw = () => {
+         <div className="balance-label">Available Balance</div>
+         <div style={{ marginBottom: 6 }}>
+           <span className="balance-amount">{balance.toFixed(4)}</span>
+-          <span className="balance-currency">USDT</span>
++          <span className="balance-currency">TON</span>
+         </div>
+ 
+         {/* Progress bar toward minimum */}
+@@ -67,7 +67,7 @@ const Withdraw = () => {
+           <div style={{ marginTop: 14 }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6, fontFamily: 'var(--font-mono)' }}>
+               <span>Progress to minimum</span>
+-              <span>${balance.toFixed(4)} / ${MIN_WITHDRAWAL.toFixed(2)}</span>
++              <span>{balance.toFixed(4)} / {MIN_WITHDRAWAL.toFixed(4)} TON</span>
+             </div>
+             <div style={{ height: 5, borderRadius: 99, background: 'var(--border)', overflow: 'hidden' }}>
+               <div style={{
+@@ -80,7 +80,7 @@ const Withdraw = () => {
+               }} />
+             </div>
+             <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 6, textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
+-              ${(MIN_WITHDRAWAL - balance).toFixed(4)} more needed
++              {(MIN_WITHDRAWAL - balance).toFixed(4)} more TON needed
+             </div>
+           </div>
+         )}
+@@ -90,14 +90,14 @@ const Withdraw = () => {
+       <div className="card" style={{ marginBottom: 14 }}>
+         <form onSubmit={handleWithdraw}>
+           <div className="input-group">
+-            <label className="input-label" htmlFor="withdraw-amount">Amount (USDT)</label>
++            <label className="input-label" htmlFor="withdraw-amount">Amount (TON)</label>
+             <input
+               id="withdraw-amount"
+               type="number"
+               className="input-field mono"
+               value={amount}
+               onChange={(e) => setAmount(e.target.value)}
+-              placeholder={`Min $${MIN_WITHDRAWAL.toFixed(2)}`}
++              placeholder={`Min ${MIN_WITHDRAWAL.toFixed(4)}`}
+               step="0.0001"
+               min={MIN_WITHDRAWAL}
+               max={balance}
+@@ -107,14 +107,14 @@ const Withdraw = () => {
+           </div>
+ 
+           <div className="input-group">
+-            <label className="input-label" htmlFor="withdraw-wallet">USDT BEP20 Wallet Address</label>
++            <label className="input-label" htmlFor="withdraw-wallet">TON Wallet Address</label>
+             <input
+               id="withdraw-wallet"
+               type="text"
+               className="input-field mono"
+               value={wallet}
+               onChange={(e) => setWallet(e.target.value)}
+-              placeholder="0x…"
++              placeholder="EQ..."
+               required
+               disabled={!canWithdraw || loading}
+             />
+@@ -131,7 +131,7 @@ const Withdraw = () => {
+               ? <><LoadingSpinner size={18} /> Processing…</>
+               : canWithdraw
+                 ? 'Request Withdrawal'
+-                : `Minimum $${MIN_WITHDRAWAL.toFixed(2)} Required`}
++                : `Minimum ${MIN_WITHDRAWAL.toFixed(4)} TON Required`}
+           </button>
+         </form>
+       </div>
+@@ -141,7 +141,7 @@ const Withdraw = () => {
+         <strong>ℹ️ Important</strong><br />
+         <ul style={{ paddingLeft: 16, marginTop: 8, lineHeight: '1.7' }}>
+           <li>Withdrawals are processed manually within <strong>1–3 business days</strong></li>
+-          <li>Make sure your address supports <strong>BEP20 (BSC)</strong> network.</li>
++          <li>Make sure your address supports <strong>TON</strong> network.</li>
+           <li>Funds sent to wrong network or address <strong>cannot be recovered</strong></li>
+         </ul>
+       </div>
+diff --git a/frontend/vite.config.js b/frontend/vite.config.js
+index 7f7c65f..1bc468b 100644
+--- a/frontend/vite.config.js
++++ b/frontend/vite.config.js
+@@ -8,6 +8,9 @@ export default defineConfig({
+     proxy: {
+       '/api': 'http://localhost:3001',
+       '/admin': 'http://localhost:3001'
++    },
++    fs: {
++      allow: ['..']
+     }
+   },
+   build: {
