@@ -9,3 +9,5 @@ backend/data/
 *.db-shm
 *.db-wal
 .DS_Store
+logs/
+backups/

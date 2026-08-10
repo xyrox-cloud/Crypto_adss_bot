@@ -70,10 +70,30 @@ app.use('/api/withdrawals', withdrawalsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/support', supportRouter);
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+// Health check endpoint
+const healthHandler = (req, res) => {
+  try {
+    const { getDb } = require('./db/database');
+    const db = getDb();
+    db.prepare('SELECT 1').get();
+    res.json({
+      status: 'ok',
+      uptime: Math.floor(process.uptime()),
+      db: 'connected',
+      memory: process.memoryUsage(),
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      db: 'disconnected',
+      error: err.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
 
 // 404 handler
 app.use((req, res) => {
