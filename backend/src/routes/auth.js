@@ -115,7 +115,11 @@ router.post('/login', loginRateLimiter, (req, res) => {
     }
 
     // Generate JWT Access Token
-    const jwtSecret = process.env.JWT_SECRET || process.env.ADMIN_JWT_SECRET || 'blitz_secure_jwt_secret_key_2026';
+    const jwtSecret = process.env.JWT_SECRET || process.env.ADMIN_JWT_SECRET;
+    if (!jwtSecret) {
+      console.error('[AUTH ERROR] Missing JWT_SECRET or ADMIN_JWT_SECRET in env');
+      return res.status(500).json({ error: 'Server configuration error: JWT Secret not configured' });
+    }
     const token = jwt.sign(
       {
         id: user.id,
@@ -161,7 +165,10 @@ router.get('/verify', (req, res) => {
   }
 
   const token = authHeader.split(' ')[1];
-  const jwtSecret = process.env.JWT_SECRET || process.env.ADMIN_JWT_SECRET || 'blitz_secure_jwt_secret_key_2026';
+  const jwtSecret = process.env.JWT_SECRET || process.env.ADMIN_JWT_SECRET;
+  if (!jwtSecret) {
+    return res.status(500).json({ valid: false, error: 'Server configuration error' });
+  }
 
   try {
     const decoded = jwt.verify(token, jwtSecret);

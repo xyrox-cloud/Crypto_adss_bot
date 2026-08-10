@@ -11,18 +11,29 @@ const router = express.Router();
 /* ─────────────────────────────────────────────────────────────────
    Payout Announcement Helper
 ───────────────────────────────────────────────────────────────── */
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 function generatePayoutMessage(amount, userIdentifier, walletAddress, txHash = null) {
-  const displayWallet = walletAddress.length > 10 
-    ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` 
-    : walletAddress;
+  const safeUser = escapeHtml(userIdentifier);
+  const safeWallet = escapeHtml(walletAddress);
+  const displayWallet = safeWallet.length > 10 
+    ? `${safeWallet.slice(0, 6)}...${safeWallet.slice(-4)}` 
+    : safeWallet;
   
   let msg = `✅ <b>PAYOUT SUCCESSFUL</b>\n\n`;
   msg += `💰 <b>Amount:</b> ${parseFloat(amount).toFixed(4)} TON\n`;
-  msg += `👤 <b>User:</b> ${userIdentifier}\n`;
+  msg += `👤 <b>User:</b> ${safeUser}\n`;
   msg += `📮 <b>To:</b> <code>${displayWallet}</code>\n`;
   
   if (txHash) {
-    msg += `🔍 <b>Tx:</b> <a href="https://tonviewer.com/transaction/${txHash}">${txHash}</a>`;
+    const safeTx = escapeHtml(txHash);
+    msg += `🔍 <b>Tx:</b> <a href="https://tonviewer.com/transaction/${safeTx}">${safeTx}</a>`;
   }
   
   return msg;

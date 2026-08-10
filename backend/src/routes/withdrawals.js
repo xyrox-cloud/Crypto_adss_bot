@@ -28,8 +28,8 @@ router.post('/request', extractTelegramUser, (req, res) => {
     }
 
     const withdrawAmount = parseFloat(amount);
-    if (isNaN(withdrawAmount) || withdrawAmount < minWithdrawal) {
-      return res.status(400).json({ error: `Minimum withdrawal amount is ${minWithdrawal} TON` });
+    if (!Number.isFinite(withdrawAmount) || withdrawAmount <= 0 || withdrawAmount < minWithdrawal) {
+      return res.status(400).json({ error: `Invalid withdrawal amount (minimum ${minWithdrawal} TON)` });
     }
 
     const user = db.prepare('SELECT id, balance, banned FROM users WHERE telegram_id = ?').get(telegramId);

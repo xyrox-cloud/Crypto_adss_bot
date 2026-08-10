@@ -3,32 +3,32 @@ const crypto = require('crypto');
 
 function requireAdmin(req, res, next) {
   const superAdminId = process.env.SUPER_ADMIN_ID;
-  
-  if (superAdminId) {
-    const initData = req.headers['x-telegram-init-data'];
-    const botToken = process.env.BOT_TOKEN;
-    const tgId = req.headers['x-telegram-id'];
+  const botToken = process.env.BOT_TOKEN;
+  const initData = req.headers['x-telegram-init-data'];
 
-    if (initData && botToken && botToken !== 'placeholder_bot_token') {
-      const tgUser = verifyTelegramInitData(initData, botToken);
-      if (tgUser && String(tgUser.id).split('.')[0] === superAdminId) {
-        req.admin = { role: 'super_admin' };
-        return next();
-      }
-    } else if (tgId && String(tgId).split('.')[0] === superAdminId) {
-      req.admin = { role: 'super_admin' };
+  // Cryptographic verification via Telegram WebApp initData for super admin
+  if (superAdminId && initData && botToken && botToken !== 'placeholder_bot_token') {
+    const tgUser = verifyTelegramInitData(initData, botToken);
+    if (tgUser && String(tgUser.id).split('.')[0] === superAdminId) {
+      req.admin = { role: 'super_admin', id: tgUser.id };
       return next();
     }
   }
 
+  // JWT Bearer Token Authentication
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Unauthorized: Missing or invalid token' });
   }
 
   const token = authHeader.split(' ')[1];
+  const jwtSecret = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    return res.status(500).json({ error: 'Server configuration error: Missing JWT secret' });
+  }
+
   try {
-    const decoded = jwt.verify(token, process.env.ADMIN_JWT_SECRET);
+    const decoded = jwt.verify(token, jwtSecret);
     req.admin = decoded;
     next();
   } catch (err) {
@@ -66,7 +66,7 @@ function verifyTelegramInitData(initData, botToken) {
 
     if (computedHash !== hash) return null;
 
-    // Optionally validate freshness (5 min window)
+    // Validate freshness (24 hours window)
     const authDate = parseInt(params.get('auth_date') || '0', 10);
     const now = Math.floor(Date.now() / 1000);
     if (now - authDate > 86400) return null; // 24 hours
@@ -81,12 +81,31 @@ function verifyTelegramInitData(initData, botToken) {
 }
 
 function extractTelegramUser(req, res, next) {
+  const authHeader = req.headers.authorization;
   const initData = req.headers['x-telegram-init-data'];
   const telegramId = req.headers['x-telegram-id'];
   const telegramUsername = req.headers['x-telegram-username'];
   const botToken = process.env.BOT_TOKEN;
+  const jwtSecret = process.env.JWT_SECRET || process.env.ADMIN_JWT_SECRET;
 
-  // In production: validate initData cryptographically
+  // 1. Verify via JWT Bearer token if provided
+  if (authHeader && authHeader.startsWith('Bearer ') && jwtSecret) {
+    const token = authHeader.split(' ')[1];
+    try {
+      const decoded = jwt.verify(token, jwtSecret);
+      if (decoded && (decoded.telegram_id || decoded.id)) {
+        req.telegramUser = {
+          id: String(decoded.telegram_id || decoded.id).split('.')[0],
+          username: decoded.username || ''
+        };
+        return next();
+      }
+    } catch (e) {
+      // Continue to next check if token verification fails
+    }
+  }
+
+  // 2. Cryptographically validate initData
   if (initData && botToken && botToken !== 'placeholder_bot_token') {
     const user = verifyTelegramInitData(initData, botToken);
     if (!user) {
@@ -99,17 +118,16 @@ function extractTelegramUser(req, res, next) {
     return next();
   }
 
-  // Fallback: header-based auth (development / bot calls)
-  if (!telegramId) {
-    return res.status(401).json({ error: 'Unauthorized: Missing Telegram ID' });
+  // 3. Fallback: header-based auth (development / testing environment only)
+  if (process.env.NODE_ENV !== 'production' && telegramId) {
+    req.telegramUser = {
+      id: String(telegramId).split('.')[0],
+      username: telegramUsername || ''
+    };
+    return next();
   }
 
-  req.telegramUser = {
-    id: String(telegramId).split('.')[0],
-    username: telegramUsername || ''
-  };
-
-  next();
+  return res.status(401).json({ error: 'Unauthorized: Missing valid authentication token or initData' });
 }
 
 module.exports = {
