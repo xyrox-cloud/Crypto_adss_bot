@@ -1,3 +1,4 @@
+import { MIN_WITHDRAWAL, REWARD_PER_AD } from '../config';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
@@ -8,7 +9,6 @@ import { ChevronDown, ChevronUp, Wallet, Users, Play, CheckCircle } from 'lucide
 import createAdHandler from 'monetag-tg-sdk';
 
 const MAX_ADS_PER_DAY = parseInt(import.meta.env.VITE_MAX_ADS_PER_DAY || '20', 10);
-import { MIN_WITHDRAWAL, REWARD_PER_AD } from '../config';
 
 const Earn = () => {
   const navigate = useNavigate();
