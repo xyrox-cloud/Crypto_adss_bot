@@ -5,9 +5,9 @@ import ConfirmModal from '../ConfirmModal';
 
 const SETTING_META = {
   reward_per_ad: {
-    label: 'Reward Per Ad (USDT)',
-    desc: 'Total USDT value of one ad watch. Platform cut + user share must sum to this.',
-    unit: 'USDT',
+    label: 'Reward Per Ad (TON)',
+    desc: 'Total TON value of one ad watch. Platform cut + user share must sum to this.',
+    unit: 'TON',
     step: '0.0001',
     min: '0.0001',
   },
@@ -27,9 +27,9 @@ const SETTING_META = {
     min: '1',
   },
   min_withdrawal: {
-    label: 'Minimum Withdrawal (USDT)',
+    label: 'Minimum Withdrawal (TON)',
     desc: 'Users must accumulate at least this much before they can withdraw.',
-    unit: 'USDT',
+    unit: 'TON',
     step: '0.01',
     min: '0.01',
   },
@@ -165,7 +165,7 @@ export default function AdminSettings() {
             <div>
               <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Per ad (gross)</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 18, color: 'var(--text-primary)', fontWeight: 700 }}>
-                ${rewardPerAd.toFixed(5)} USDT
+                ${rewardPerAd.toFixed(5)} TON
               </div>
             </div>
             <div>

@@ -123,7 +123,7 @@ const Support = () => {
         />
         <FAQItem 
           question="What do I get for watching an ad?" 
-          answer="You get a fixed amount of USDT added to your balance for each ad you watch (up to the daily limit). The exact amount depends on the current reward pool." 
+          answer="You get a fixed amount of TON added to your balance for each ad you watch (up to the daily limit). The exact amount depends on the current reward pool." 
         />
         <FAQItem 
           question="I watched an ad but didn't get my reward — what do I do?" 
@@ -139,7 +139,7 @@ const Support = () => {
         />
         <FAQItem 
           question="How do withdrawals work?" 
-          answer={`Once you reach the minimum withdrawal amount of $2.00, you can request a withdrawal to your BEP20 USDT wallet. Admins review and process payments manually.`} 
+          answer="Once you reach the minimum balance, enter your TON wallet address on the Withdraw page. Withdrawals are processed manually." 
         />
       </div>
     </div>

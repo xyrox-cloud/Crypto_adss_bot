@@ -33,7 +33,7 @@ export default function AdminLogin({ onLogin }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0A0A0A', color: '#EDEFF3', flexDirection: 'column' }}>
       <div style={{ background: '#141414', padding: '30px', borderRadius: '0px', border: '1px solid #242424', width: '100%', maxWidth: '350px' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '20px', fontWeight: 'bold' }}>AdShare Admin</h2>
+        <h2 style={{ textAlign: 'center', marginBottom: '20px', fontWeight: 'bold' }}>Blitz Game Zone Admin</h2>
         {error && (
           <div style={{ background: 'rgba(224,82,82,0.12)', color: '#E05252', padding: '10px', fontSize: '13px', marginBottom: '15px' }}>
             {error}

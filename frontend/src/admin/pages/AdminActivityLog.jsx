@@ -29,13 +29,13 @@ function parseDetails(raw) {
 }
 
 function relTime(dateStr) {
-  const d = Date.now() - new Date(dateStr).getTime();
+  const d = Date.now() - new Date(typeof dateStr === 'string' && !dateStr.includes('T') ? dateStr.replace(' ', 'T') + 'Z' : dateStr).getTime();
   const m = Math.floor(d / 60000);
   if (m < 1) return 'just now';
   if (m < 60) return `${m}m ago`;
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ago`;
-  return new Date(dateStr).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
+  return new Date(typeof dateStr === 'string' && !dateStr.includes('T') ? dateStr.replace(' ', 'T') + 'Z' : dateStr).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
 }
 
 export default function AdminActivityLog() {
@@ -92,7 +92,7 @@ export default function AdminActivityLog() {
                   </div>
                   <div className="log-details">{parseDetails(row.details)}</div>
                   <div className="log-time">
-                    {row.admin} · {relTime(row.created_at)} · {new Date(row.created_at).toLocaleString()}
+                    {row.admin} · {relTime(row.created_at)} · {new Date(row.created_at.replace(' ', 'T') + 'Z').toLocaleString()}
                   </div>
                 </div>
               </div>

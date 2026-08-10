@@ -129,7 +129,7 @@ const Menu = () => {
             <button onClick={() => navigate('/about')} className="flex items-center p-3 hover:bg-white/5 transition-colors border-b border-cardborder text-left">
               <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center mr-3"><Info size={16} className="text-white" /></div>
               <div className="flex-1">
-                <div className="font-bold text-white text-sm">About AdShare</div>
+                <div className="font-bold text-white text-sm">About Blitz Game Zone</div>
                 <div className="text-[11px] text-textmuted leading-tight">Learn about us</div>
               </div>
               <ChevronRight size={18} className="text-textmuted" />
@@ -173,7 +173,7 @@ const Menu = () => {
         {/* FOOTER */}
         <div className="mt-8 text-center px-4">
           <div className="text-textmuted text-[11px] mb-1">
-            AdShare v1.0 &middot; Player since {user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Aug 2026'}
+            Blitz Game Zone v1.0 &middot; Player since {user?.created_at ? new Date(user.created_at.replace(' ', 'T') + 'Z').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Aug 2026'}
           </div>
           <div className="text-textmuted/60 text-[10px]">
             Credits has no monetary value and cannot be cashed out.

@@ -119,7 +119,7 @@ router.get('/reward', rewardLimiter, (req, res) => {
 
       db.prepare(`
         INSERT INTO activity_log (action, details) VALUES (?, ?)
-      `).run('ad_reward_granted', `User ${telegramId} earned ${userShare} USDT`);
+      `).run('ad_reward_granted', `User ${telegramId} earned ${userShare} TON`);
 
       return watchInfo.lastInsertRowid;
     });

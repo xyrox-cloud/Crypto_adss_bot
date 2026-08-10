@@ -4,7 +4,7 @@ import { useToast } from '../context/ToastContext';
 import { requestWithdrawal } from '../api/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-const MIN_WITHDRAWAL = parseFloat(import.meta.env.VITE_MIN_WITHDRAWAL || '2.00');
+const MIN_WITHDRAWAL = parseFloat(import.meta.env.VITE_MIN_WITHDRAWAL || '0.50');
 
 const Withdraw = () => {
   const { user, refreshUser } = useUser();
@@ -23,7 +23,7 @@ const Withdraw = () => {
     const wAmount = parseFloat(amount);
 
     if (isNaN(wAmount) || wAmount < MIN_WITHDRAWAL) {
-      showToast(`Minimum withdrawal is $${MIN_WITHDRAWAL.toFixed(2)} USDT`, 'error');
+      showToast(`Minimum withdrawal is ${MIN_WITHDRAWAL.toFixed(4)} TON`, 'error');
       return;
     }
     if (wAmount > balance) {
@@ -59,7 +59,7 @@ const Withdraw = () => {
         <div className="balance-label">Available Balance</div>
         <div style={{ marginBottom: 6 }}>
           <span className="balance-amount">{balance.toFixed(4)}</span>
-          <span className="balance-currency">USDT</span>
+          <span className="balance-currency">TON</span>
         </div>
 
         {/* Progress bar toward minimum */}
@@ -67,7 +67,7 @@ const Withdraw = () => {
           <div style={{ marginTop: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6, fontFamily: 'var(--font-mono)' }}>
               <span>Progress to minimum</span>
-              <span>${balance.toFixed(4)} / ${MIN_WITHDRAWAL.toFixed(2)}</span>
+              <span>{balance.toFixed(4)} / {MIN_WITHDRAWAL.toFixed(4)} TON</span>
             </div>
             <div style={{ height: 5, borderRadius: 99, background: 'var(--border)', overflow: 'hidden' }}>
               <div style={{
@@ -80,7 +80,7 @@ const Withdraw = () => {
               }} />
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 6, textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
-              ${(MIN_WITHDRAWAL - balance).toFixed(4)} more needed
+              {(MIN_WITHDRAWAL - balance).toFixed(4)} more TON needed
             </div>
           </div>
         )}
@@ -90,14 +90,14 @@ const Withdraw = () => {
       <div className="card" style={{ marginBottom: 14 }}>
         <form onSubmit={handleWithdraw}>
           <div className="input-group">
-            <label className="input-label" htmlFor="withdraw-amount">Amount (USDT)</label>
+            <label className="input-label" htmlFor="withdraw-amount">Amount (TON)</label>
             <input
               id="withdraw-amount"
               type="number"
               className="input-field mono"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder={`Min $${MIN_WITHDRAWAL.toFixed(2)}`}
+              placeholder={`Min ${MIN_WITHDRAWAL.toFixed(4)}`}
               step="0.0001"
               min={MIN_WITHDRAWAL}
               max={balance}
@@ -107,14 +107,14 @@ const Withdraw = () => {
           </div>
 
           <div className="input-group">
-            <label className="input-label" htmlFor="withdraw-wallet">USDT BEP20 Wallet Address</label>
+            <label className="input-label" htmlFor="withdraw-wallet">TON Wallet Address</label>
             <input
               id="withdraw-wallet"
               type="text"
               className="input-field mono"
               value={wallet}
               onChange={(e) => setWallet(e.target.value)}
-              placeholder="0x…"
+              placeholder="EQ..."
               required
               disabled={!canWithdraw || loading}
             />
@@ -131,7 +131,7 @@ const Withdraw = () => {
               ? <><LoadingSpinner size={18} /> Processing…</>
               : canWithdraw
                 ? 'Request Withdrawal'
-                : `Minimum $${MIN_WITHDRAWAL.toFixed(2)} Required`}
+                : `Minimum ${MIN_WITHDRAWAL.toFixed(4)} TON Required`}
           </button>
         </form>
       </div>
@@ -141,7 +141,7 @@ const Withdraw = () => {
         <strong>ℹ️ Important</strong><br />
         <ul style={{ paddingLeft: 16, marginTop: 8, lineHeight: '1.7' }}>
           <li>Withdrawals are processed manually within <strong>1–3 business days</strong></li>
-          <li>Make sure your address supports <strong>BEP20 (BSC)</strong> network.</li>
+          <li>Make sure your address supports <strong>TON</strong> network.</li>
           <li>Funds sent to wrong network or address <strong>cannot be recovered</strong></li>
         </ul>
       </div>

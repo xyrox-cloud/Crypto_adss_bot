@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AdShare Admin Panel</title>
+  <title>Admin - Blitz Game Zone (TON)</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -403,8 +403,8 @@
               <tr>
                 <th>ID</th>
                 <th>User</th>
-                <th>Amount (USDT)</th>
-                <th>Wallet (BEP20)</th>
+                <th>Amount (TON)</th>
+                <th>Wallet (TON)</th>
                 <th>Status</th>
                 <th>Requested</th>
                 <th>Actions</th>
@@ -436,7 +436,7 @@
                 <th>Telegram ID</th>
                 <th>Username</th>
                 <th>Name</th>
-                <th>Balance (USDT)</th>
+                <th>Balance (TON)</th>
                 <th>Total Earned</th>
                 <th>Joined</th>
               </tr>
@@ -674,13 +674,13 @@
         <div class="stat-card">
           <div class="stat-icon">💰</div>
           <div class="stat-label">Platform Revenue (40%)</div>
-          <div class="stat-value text-accent">$${fmtUsdt(stats.platform_cut_total)}</div>
-          <div class="stat-sub">USDT total</div>
+          <div class="stat-value text-accent">${fmtUsdt(stats.platform_cut_total)}</div>
+          <div class="stat-sub">TON total</div>
         </div>
         <div class="stat-card">
           <div class="stat-icon">💸</div>
           <div class="stat-label">Total Paid Out</div>
-          <div class="stat-value text-success">$${fmtUsdt(stats.total_paid)}</div>
+          <div class="stat-value text-success">${fmtUsdt(stats.total_paid)}</div>
           <div class="stat-sub">To users</div>
         </div>
         <div class="stat-card">
@@ -692,7 +692,7 @@
         <div class="stat-card">
           <div class="stat-icon">🏦</div>
           <div class="stat-label">Total Revenue</div>
-          <div class="stat-value">$${fmtUsdt(stats.total_revenue)}</div>
+          <div class="stat-value">${fmtUsdt(stats.total_revenue)}</div>
           <div class="stat-sub">Gross platform income</div>
         </div>
       `;
@@ -718,7 +718,7 @@
             <strong>@${w.username || 'unknown'}</strong><br/>
             <span class="text-muted mono">${w.telegram_id}</span>
           </td>
-          <td><strong class="text-accent">$${fmtUsdt(w.amount)}</strong></td>
+          <td><strong class="text-accent">${fmtUsdt(w.amount)}</strong></td>
           <td>
             <span class="mono" title="${w.wallet_address}">${truncate(w.wallet_address, 20)}</span>
             <button class="btn btn-sm" style="background:none;color:var(--muted);padding:2px 4px" onclick="copyText('${w.wallet_address}')" title="Copy wallet">📋</button>
@@ -778,8 +778,8 @@
           <td class="mono text-muted">${u.telegram_id}</td>
           <td>${u.username ? `@${u.username}` : '<span class="text-muted">—</span>'}</td>
           <td>${u.first_name || '<span class="text-muted">—</span>'}</td>
-          <td><strong class="text-accent">$${fmtUsdt(u.balance)}</strong></td>
-          <td class="text-muted">$${fmtUsdt(u.total_earned)}</td>
+          <td><strong class="text-accent">${fmtUsdt(u.balance)}</strong></td>
+          <td class="text-muted">${fmtUsdt(u.total_earned)}</td>
           <td class="text-muted">${fmtDate(u.created_at)}</td>
         </tr>
       `).join('');

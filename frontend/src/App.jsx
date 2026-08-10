@@ -20,6 +20,7 @@ import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import Leaderboard from './pages/Leaderboard';
 import Game from './pages/Game';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   const [initializing, setInitializing] = useState(true);
@@ -78,7 +79,7 @@ function App() {
   if (initializing) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-white">
-        <div className="text-3xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-br from-primary to-secondary uppercase">AdShare</div>
+        <div className="text-3xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-br from-primary to-secondary uppercase">Blitz Game Zone</div>
         <div className="text-textmuted mb-8 text-sm font-bold uppercase tracking-wider">Preparing dashboard...</div>
         <LoadingSpinner size={26} color="var(--primary)" />
       </div>
@@ -96,7 +97,8 @@ function App() {
       <UserProvider initialUserData={initialUser}>
         <div className="min-h-screen w-full max-w-xl mx-auto relative bg-background">
           <div className="w-full h-full">
-            <Routes>
+            <ErrorBoundary>
+              <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/earn" element={<Earn />} />
               <Route path="/history" element={<History />} />
@@ -111,7 +113,8 @@ function App() {
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/game" element={<Game />} />
               <Route path="/admin/*" element={<AdminApp />} />
-            </Routes>
+              </Routes>
+            </ErrorBoundary>
           </div>
           <Routes>
             <Route path="/admin/*" element={null} />

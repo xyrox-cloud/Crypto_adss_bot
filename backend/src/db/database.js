@@ -154,17 +154,17 @@ function initDb() {
   // Seed default settings if not present
   const seedSettings = db.prepare(`INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)`);
   const seedMany = db.transaction(() => {
-    seedSettings.run('reward_per_ad',      process.env.AD_REWARD_USDT   || '0.01',  'USDT paid out per ad watched (user + platform share combined)');
+    seedSettings.run('reward_per_ad',      process.env.AD_REWARD_TON    || '0.001',  'TON paid out per ad watched (user + platform share combined)');
     seedSettings.run('platform_cut_pct',   '40',                                     'Platform keeps this % of each ad reward');
     seedSettings.run('revenue_split',      '60',                                     'User % cut of the ad reward');
     seedSettings.run('max_ads_per_day',    process.env.MAX_ADS_PER_DAY  || '20',    'Max ads a user can watch per calendar day');
     seedSettings.run('max_ads_per_hour',   process.env.MAX_ADS_PER_HOUR || '5',     'Max ads a user can watch per hour');
-    seedSettings.run('min_withdrawal',     process.env.MIN_WITHDRAWAL   || '2.00',  'Minimum USDT amount for a withdrawal request');
+    seedSettings.run('min_withdrawal',     process.env.MIN_WITHDRAWAL   || '0.50',  'Minimum TON amount for a withdrawal request');
     seedSettings.run('ad_cooldown_secs',   '30',                                     'Seconds a user must wait between ad watches');
-    seedSettings.run('daily_bonus_amount', '0.001',                                  'USDT amount for daily check-in bonus');
-    seedSettings.run('minigame_min_reward','0.001',                                  'Minimum USDT reward for daily minigame');
-    seedSettings.run('minigame_max_reward','0.005',                                  'Maximum USDT reward for daily minigame');
-    seedSettings.run('referral_bonus',     '0.005',                                  'One-time USDT bonus for referring a user who completes an action');
+    seedSettings.run('daily_bonus_amount', '0.0001',                                 'TON amount for daily check-in bonus');
+    seedSettings.run('minigame_min_reward','0.0001',                                 'Minimum TON reward for daily minigame');
+    seedSettings.run('minigame_max_reward','0.0005',                                 'Maximum TON reward for daily minigame');
+    seedSettings.run('referral_bonus',     '0.0005',                                 'One-time TON bonus for referring a user who completes an action');
   });
   seedMany();
 }
@@ -226,7 +226,7 @@ function processReferralBonus(db, user, ipAddress) {
     // Record activity
     db.prepare(`
       INSERT INTO activity_log (action, details) VALUES (?, ?)
-    `).run('referral_bonus_granted', `Referrer ${referrer.telegram_id} earned ${bonusAmount} USDT for referring ${user.telegram_id}`);
+    `).run('referral_bonus_granted', `Referrer ${referrer.telegram_id} earned ${bonusAmount} TON for referring ${user.telegram_id}`);
   });
   
   try {

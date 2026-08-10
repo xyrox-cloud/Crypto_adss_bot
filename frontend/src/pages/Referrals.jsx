@@ -10,7 +10,7 @@ const Referrals = () => {
   const [referrals, setReferrals] = useState([]);
   const [loading, setLoading]     = useState(true);
 
-  const botUsername = import.meta.env.VITE_BOT_USERNAME || 'AdShare_Bot';
+  const botUsername = import.meta.env.VITE_BOT_USERNAME || 'Blitz_Game_Zone_bot';
   const refLink     = `https://t.me/${botUsername}?start=ref_${user?.telegram_id || user?.id}`;
 
   useEffect(() => {
@@ -35,10 +35,10 @@ const Referrals = () => {
   const shareLink = () => {
     if (window.Telegram?.WebApp?.openTelegramLink) {
       window.Telegram.WebApp.openTelegramLink(
-        `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent('Join me on AdShare and earn USDT by watching ads! 🚀')}`
+        `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent('Join me on Blitz Game Zone and earn TON by playing games and watching ads! 🚀')}`
       );
     } else if (navigator.share) {
-      navigator.share({ title: 'Join AdShare', text: 'Earn USDT by watching ads on Telegram!', url: refLink });
+      navigator.share({ title: 'Join Blitz Game Zone', text: 'Earn TON by playing games and watching ads on Telegram!', url: refLink });
     } else {
       copyLink();
     }
@@ -130,7 +130,7 @@ const Referrals = () => {
                 {r.username ? `@${r.username}` : r.first_name || 'User'}
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 2 }}>
-                Joined {new Date(r.created_at).toLocaleDateString([], { dateStyle: 'medium' })}
+                Joined {new Date(r.created_at.replace(' ', 'T') + 'Z').toLocaleDateString([], { dateStyle: 'medium' })}
               </div>
             </div>
             <div style={{ fontSize: 11, color: 'var(--success)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>

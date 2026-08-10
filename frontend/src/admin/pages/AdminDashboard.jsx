@@ -78,15 +78,15 @@ export default function AdminDashboard() {
       <div className="admin-stats-grid" style={{ marginBottom: 24 }}>
         <StatCard
           label="Platform Revenue (40%)"
-          value={`$${fmt(stats.total_revenue, 4)}`}
+          value={`${fmt(stats.total_revenue, 4)}`}
           variant="gold"
-          sub="USDT"
+          sub="TON"
         />
         <StatCard
           label="Total Paid Out"
-          value={`$${fmt(stats.total_paid_out, 4)}`}
+          value={`${fmt(stats.total_paid_out, 4)}`}
           variant="success"
-          sub="USDT"
+          sub="TON"
         />
       </div>
 
@@ -98,7 +98,7 @@ export default function AdminDashboard() {
         <StatCard
           label="Pending Requests"
           value={fmtN(stats.pending_withdrawals_count)}
-          sub={stats.pending_withdrawals_amount > 0 ? `$${fmt(stats.pending_withdrawals_amount, 4)} USDT pending` : null}
+          sub={stats.pending_withdrawals_amount > 0 ? `${fmt(stats.pending_withdrawals_amount, 4)} TON pending` : null}
           variant={stats.pending_withdrawals_count > 0 ? 'warn' : ''}
           highlight={stats.pending_withdrawals_count > 0}
         />

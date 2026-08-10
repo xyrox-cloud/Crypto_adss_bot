@@ -156,15 +156,11 @@ router.get('/leaderboard', extractTelegramUser, (req, res) => {
     let whereClause = '';
 
     if (time === 'today') {
-      // For today, we might need to count from ad_watches, but since we don't have a daily column in users,
-      // we join and group.
       const rows = db.prepare(`
-        SELECT u.id, u.telegram_id, u.username, u.first_name, u.photo_url, COUNT(a.id) as score
-        FROM users u
-        JOIN ad_watches a ON u.id = a.user_id
-        WHERE date(a.timestamp) = date('now')
-        GROUP BY u.id
-        ORDER BY score DESC
+        SELECT id, telegram_id, username, first_name, photo_url, total_score_today as score
+        FROM users
+        WHERE total_score_today > 0
+        ORDER BY total_score_today DESC
         LIMIT 50
       `).all();
 
@@ -172,9 +168,10 @@ router.get('/leaderboard', extractTelegramUser, (req, res) => {
     } else {
       // All time
       const rows = db.prepare(`
-        SELECT id, telegram_id, username, first_name, photo_url, total_ads_watched as score
+        SELECT id, telegram_id, username, first_name, photo_url, all_time_score as score
         FROM users
-        ORDER BY total_ads_watched DESC
+        WHERE all_time_score > 0
+        ORDER BY all_time_score DESC
         LIMIT 50
       `).all();
 
@@ -331,7 +328,7 @@ router.post('/daily-claim', extractTelegramUser, (req, res) => {
 
       db.prepare(`
         INSERT INTO activity_log (action, details) VALUES (?, ?)
-      `).run('daily_bonus_granted', `User ${telegramId} claimed daily bonus ${rewardUsdt} USDT. Streak: ${newStreak}`);
+      `).run('daily_bonus_granted', `User ${telegramId} claimed daily bonus ${rewardUsdt} TON. Streak: ${newStreak}`);
     });
 
     tx();
@@ -411,7 +408,7 @@ router.post('/minigame-claim', extractTelegramUser, (req, res) => {
 
       db.prepare(`
         INSERT INTO activity_log (action, details) VALUES (?, ?)
-      `).run('minigame_reward_granted', `User ${telegramId} won minigame reward ${rewardUsdt} USDT.`);
+      `).run('minigame_reward_granted', `User ${telegramId} won minigame reward ${rewardUsdt} TON.`);
     });
 
     tx();
@@ -486,7 +483,7 @@ router.post('/scratch-claim', extractTelegramUser, (req, res) => {
 
       db.prepare(`
         INSERT INTO activity_log (action, details) VALUES (?, ?)
-      `).run('scratch_reward_granted', `User ${telegramId} won scratch reward ${rewardUsdt} USDT.`);
+      `).run('scratch_reward_granted', `User ${telegramId} won scratch reward ${rewardUsdt} TON.`);
     });
 
     tx();

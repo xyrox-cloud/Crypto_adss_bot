@@ -50,7 +50,7 @@ const Earn = () => {
           fetchStats();
           return;
         }
-        showToast('Ad network not available. Try again later.', 'error');
+        showToast('❌ Ad network not available. Rewards will not be credited.', 'error');
         return;
       }
 
@@ -96,7 +96,7 @@ const Earn = () => {
         <div className="balance-label">Available Balance</div>
         <div style={{ marginBottom: 6 }}>
           <span className="balance-amount">{balance.toFixed(4)}</span>
-          <span className="balance-currency">USDT</span>
+          <span className="balance-currency">TON</span>
         </div>
 
         {/* Progress bar toward minimum */}
@@ -159,20 +159,15 @@ const Earn = () => {
         >
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white flex items-center justify-center relative shadow-sm">
-                <svg width="24" height="24" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M100 0C44.7715 0 0 44.7715 0 100C0 155.228 44.7715 200 100 200C155.228 200 200 155.228 200 100C200 44.7715 155.228 0 100 0Z" fill="#26A17B"/>
-                  <path d="M100 128.57C125.753 128.57 149.255 124.966 166.521 119.262V97.3595C149.255 103.064 125.753 106.667 100 106.667C74.2468 106.667 50.7453 103.064 33.4795 97.3595V119.262C50.7453 124.966 74.2468 128.57 100 128.57Z" fill="white"/>
-                  <path d="M100 78.0963C126.974 78.0963 151.353 74.0205 169.567 67.5878V42.8574H116.536V62.4334C111.233 62.9067 105.714 63.1674 100 63.1674C94.2863 63.1674 88.7668 62.9067 83.4636 62.4334V42.8574H30.4326V67.5878C48.6465 74.0205 73.0255 78.0963 100 78.0963Z" fill="white"/>
-                  <path d="M83.4639 171.428H116.536V117.412C111.233 118.067 105.714 118.423 100 118.423C94.2865 118.423 88.7671 118.067 83.4639 117.412V171.428Z" fill="white"/>
-                </svg>
-                <div className="absolute -bottom-1 -right-2 bg-[#F0B90B] text-black text-[8px] font-extrabold px-1 py-0.5 border-2 border-[#26A17B] shadow-sm">
-                  BEP20
+              <div className="w-16 h-16 bg-white rounded-full flex flex-col items-center justify-center relative shadow-sm border-[3px] border-[#006699]">
+                <Play size={28} className="text-[#0088CC]" fill="currentColor" />
+                <div className="absolute -bottom-2 bg-[#0088CC] text-white text-[9px] font-extrabold px-2 py-0.5 rounded-md shadow-sm border border-white/20">
+                  TON
                 </div>
               </div>
               <div>
                 <h3 className="font-extrabold text-lg text-white uppercase leading-none">2. Extra: Watch Ads</h3>
-                <div className="text-textmuted text-[10px] font-bold mt-1 uppercase">Earn USDT Directly</div>
+                <div className="text-textmuted text-[10px] font-bold mt-1 uppercase">Earn TON Directly</div>
               </div>
             </div>
             <div className="text-primary text-[10px] font-bold bg-primary/10 border border-primary/20 px-2 py-1">
@@ -201,7 +196,7 @@ const Earn = () => {
               <div>
                 <h3 className="font-extrabold text-lg uppercase leading-none text-white">3. Withdraw</h3>
                 <div className="text-textmuted text-[10px] font-bold mt-1 uppercase">
-                  CASH OUT YOUR USDT
+                  CASH OUT YOUR TON
                 </div>
               </div>
             </div>

@@ -83,7 +83,7 @@ const Home = () => {
     setClaimingDaily(true);
     try {
       const res = await api.post('/users/daily-claim');
-      showToast(`Daily bonus claimed! ${res.data.reward} USDT`, 'success');
+      showToast(`Daily bonus claimed! ${res.data.reward} TON`, 'success');
       await refreshUser();
     } catch (err) {
       const msg = err.response?.data?.error || 'Failed to claim daily bonus';
@@ -139,7 +139,7 @@ const Home = () => {
       {/* HEADER */}
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h1 className="text-xl font-bold uppercase tracking-wider mb-2">ADSHARE</h1>
+          <h1 className="text-xl font-bold uppercase tracking-wider mb-2">BLITZ GAME ZONE</h1>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-white/20 border border-white/10 flex items-center justify-center font-bold overflow-hidden shrink-0">
               {tgUser?.photo_url ? (
@@ -169,8 +169,38 @@ const Home = () => {
         </div>
       </div>
 
-      {/* THREE EARNING OPTIONS */}
-      <h3 className="font-mono font-bold text-lg text-white tracking-wider mb-4 mt-6">EARN USDT</h3>
+      {/* 1. BLITZ MINI-GAME (HERO) */}
+      <div className="bg-[#1a202c] border-2 border-primary/50 shadow-[0_0_20px_rgba(38,161,123,0.3)] rounded-3xl p-6 mb-6 relative overflow-hidden" onClick={() => navigate('/game')}>
+        <div className="absolute top-0 right-0 w-40 h-40 bg-primary/20 rounded-full -mr-10 -mt-10 blur-2xl pointer-events-none"></div>
+        <div className="flex items-center gap-5 mb-4">
+          <div className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center border border-primary/30 shadow-lg">
+            <Target size={32} className="text-primary" />
+          </div>
+          <div>
+            <div className="bg-primary/20 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mb-1 border border-primary/30">
+              FEATURED GAME
+            </div>
+            <h2 className="text-white font-black text-3xl uppercase leading-none mb-1">BLITZ</h2>
+            <div className="text-primary text-xs font-bold uppercase tracking-wider">FIND THE ODD TILE</div>
+          </div>
+        </div>
+        <div className="bg-black/40 rounded-2xl p-4 flex justify-between items-center mb-4 border border-white/10">
+          <div>
+            <div className="text-white/60 text-[10px] font-bold uppercase">Best Score</div>
+            <div className="text-white font-extrabold text-lg">{topScore}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-white/60 text-[10px] font-bold uppercase">Rounds Played</div>
+            <div className="text-white font-extrabold text-lg">{blitzRounds}</div>
+          </div>
+        </div>
+        <button className="w-full bg-primary text-black font-black py-4 rounded-xl flex justify-center items-center gap-2 hover:bg-primary/90 transition-transform hover:scale-[1.02] uppercase tracking-widest text-base shadow-lg">
+          PLAY NOW <ChevronRight size={20} />
+        </button>
+      </div>
+
+      {/* EARNING OPTIONS */}
+      <h3 className="font-mono font-bold text-lg text-white tracking-wider mb-4 mt-6">EARN TON</h3>
       
       {/* 1. DAILY BONUS */}
       <div className="bg-cardbg border border-cardborder rounded-3xl p-5 mb-4">
@@ -181,7 +211,7 @@ const Home = () => {
             </div>
             <div>
               <h3 className="font-bold text-lg leading-tight">Daily Bonus</h3>
-              <div className="text-textmuted text-xs mt-0.5">Free USDT every 24h</div>
+              <div className="text-textmuted text-xs mt-0.5">Free TON every 24h</div>
             </div>
           </div>
           <button 
@@ -196,7 +226,8 @@ const Home = () => {
         <div className="flex justify-between gap-1 mt-4">
           {days.map((d, i) => {
             const isToday = i === normalizedDay;
-            const isClaimedToday = user?.last_daily_claim && (new Date() - new Date(user.last_daily_claim) < 24 * 60 * 60 * 1000);
+            const lastClaimRaw = user?.last_daily_claim;
+            const isClaimedToday = lastClaimRaw && (new Date() - new Date(typeof lastClaimRaw === 'string' && !lastClaimRaw.includes('T') ? lastClaimRaw.replace(' ', 'T') + 'Z' : lastClaimRaw) < 24 * 60 * 60 * 1000);
             return (
               <div 
                 key={i} 
@@ -216,35 +247,7 @@ const Home = () => {
         </div>
       </div>
 
-      {/* 1.5 BLITZ MINI-GAME */}
-      <div className="bg-[#1a202c] border border-cardborder rounded-3xl p-5 mb-4 relative overflow-hidden" onClick={() => navigate('/game')}>
-        <div className="absolute top-0 right-0 w-32 h-32 bg-[#5C89C7]/10 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none"></div>
-        <div className="flex items-center gap-4 mb-3">
-          <div className="w-14 h-14 bg-[#5C89C7]/20 rounded-2xl flex items-center justify-center border border-[#5C89C7]/30 shadow-lg">
-            <Target size={28} className="text-[#C9A055]" />
-          </div>
-          <div>
-            <div className="bg-[#C9A055]/20 text-[#C9A055] text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mb-1 border border-[#C9A055]/30">
-              FREE TO PLAY
-            </div>
-            <h2 className="text-white font-extrabold text-2xl uppercase leading-none mb-1">BLITZ</h2>
-            <div className="text-[#5C89C7] text-xs font-bold uppercase tracking-wider">FIND THE ODD TILE</div>
-          </div>
-        </div>
-        <div className="bg-black/30 rounded-2xl p-3 flex justify-between items-center mb-3 border border-white/5">
-          <div>
-            <div className="text-white/60 text-[10px] font-bold uppercase">Best Score</div>
-            <div className="text-white font-bold text-sm">{topScore}</div>
-          </div>
-          <div className="text-right">
-            <div className="text-white/60 text-[10px] font-bold uppercase">Rounds Played</div>
-            <div className="text-white font-bold text-sm">{blitzRounds}</div>
-          </div>
-        </div>
-        <button className="w-full bg-[#C9A055] text-black font-black py-3 rounded-xl flex justify-center items-center gap-2 hover:bg-[#C9A055]/90 transition-colors uppercase tracking-widest text-sm">
-          PLAY NOW <ChevronRight size={18} />
-        </button>
-      </div>
+
 
       {/* 2. PLAY & EARN (MINI-GAME) */}
       <div 
@@ -261,7 +264,7 @@ const Home = () => {
               FREE
             </div>
             <h2 className="text-white font-extrabold text-2xl uppercase leading-none mb-1">PLAY & EARN</h2>
-            <div className="text-white/90 text-xs font-bold">SPIN FOR DAILY USDT</div>
+            <div className="text-white/90 text-xs font-bold">SPIN FOR DAILY TON</div>
           </div>
         </div>
         <ChevronRight size={24} className="text-white opacity-80" />
@@ -282,7 +285,7 @@ const Home = () => {
               FREE
             </div>
             <h2 className="text-white font-extrabold text-2xl uppercase leading-none mb-1">SCRATCH & WIN</h2>
-            <div className="text-white/90 text-xs font-bold">REVEAL YOUR DAILY USDT</div>
+            <div className="text-white/90 text-xs font-bold">REVEAL YOUR DAILY TON</div>
           </div>
         </div>
         <ChevronRight size={24} className="text-white opacity-80" />
@@ -290,17 +293,17 @@ const Home = () => {
 
       {/* 3. WATCH AD FOR EXTRA REWARD */}
       <div 
-        className="bg-[#26A17B] rounded-3xl p-5 mb-6 relative overflow-hidden" 
+        className="bg-[#0088CC] rounded-3xl p-5 mb-6 relative overflow-hidden" 
         onClick={handleWatchAd}
         role="button"
       >
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none"></div>
         
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center relative shadow-sm border-2 border-[#1c7a5c]">
-            <Play size={24} className="text-[#26A17B]" fill="currentColor" />
-            <div className="absolute -bottom-1.5 -right-2 bg-[#F0B90B] text-black text-[8px] font-extrabold px-1.5 py-0.5 rounded-md shadow-sm border border-black/10">
-              BEP20
+          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center relative shadow-sm border-2 border-[#006699]">
+            <Play size={24} className="text-[#0088CC]" fill="currentColor" />
+            <div className="absolute -bottom-1.5 -right-2 bg-[#0088CC] text-white text-[8px] font-extrabold px-1.5 py-0.5 rounded-md shadow-sm border border-white/20">
+              TON
             </div>
           </div>
           <div>
@@ -308,7 +311,7 @@ const Home = () => {
               EXTRA REWARD
             </div>
             <h2 className="text-white font-extrabold text-2xl uppercase leading-none">WATCH AD</h2>
-            <div className="text-white/90 text-[10px] font-bold mt-1 tracking-wide">EARN MORE USDT INSTANTLY</div>
+            <div className="text-white/90 text-[10px] font-bold mt-1 tracking-wide">EARN MORE TON INSTANTLY</div>
           </div>
         </div>
 
@@ -319,7 +322,7 @@ const Home = () => {
           </div>
           <div className="text-right">
             <div className="text-white/70 text-[10px] font-bold uppercase">Total Earned</div>
-            <div className="text-white font-bold text-sm">${Number(stats.total_earned || 0).toFixed(4)}</div>
+            <div className="text-white font-bold text-sm">{Number(stats.total_earned || 0).toFixed(4)} TON</div>
           </div>
         </div>
       </div>
@@ -336,7 +339,7 @@ const Home = () => {
             </button>
             <div className="p-6 text-center">
               <h2 className="text-2xl font-extrabold text-white uppercase mb-2">Daily Spin</h2>
-              <p className="text-textmuted text-sm mb-6">Play once a day for a chance to win free USDT!</p>
+              <p className="text-textmuted text-sm mb-6">Play once a day for a chance to win free TON!</p>
               <SpinWheel onComplete={() => setTimeout(() => setShowSpinWheel(false), 2000)} />
             </div>
           </div>
@@ -355,7 +358,7 @@ const Home = () => {
             </button>
             <div className="p-6 text-center">
               <h2 className="text-2xl font-extrabold text-white uppercase mb-2">Scratch & Win</h2>
-              <p className="text-textmuted text-sm mb-6">Scratch once a day for a chance to win free USDT!</p>
+              <p className="text-textmuted text-sm mb-6">Scratch once a day for a chance to win free TON!</p>
               <ScratchCard onComplete={() => setTimeout(() => setShowScratchCard(false), 2000)} />
             </div>
           </div>

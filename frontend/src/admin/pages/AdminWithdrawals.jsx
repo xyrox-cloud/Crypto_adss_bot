@@ -127,10 +127,10 @@ export default function AdminWithdrawals() {
                     </span>
                   </td>
                   <td className="td-dim" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
-                    {new Date(row.requested_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                    {new Date(typeof row.requested_at === 'string' && !row.requested_at.includes('T') ? row.requested_at.replace(' ', 'T') + 'Z' : row.requested_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                   </td>
                   <td className="td-dim" style={{ fontSize: 12 }}>
-                    {row.paid_at ? new Date(row.paid_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : '—'}
+                    {row.paid_at ? new Date(typeof row.paid_at === 'string' && !row.paid_at.includes('T') ? row.paid_at.replace(' ', 'T') + 'Z' : row.paid_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : '—'}
                   </td>
                   <td style={{ fontSize: 12, color: 'var(--text-secondary)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {row.admin_note || '—'}
@@ -186,11 +186,11 @@ export default function AdminWithdrawals() {
           description={
             modal.action === 'approve'
               ? <>
-                  Confirm that you have <strong>manually sent ${Number(modal.row.amount).toFixed(4)} USDT</strong> to wallet <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--accent)', wordBreak: 'break-all' }}>{modal.row.wallet_address}</code>.<br /><br />
+                  Confirm that you have <strong>manually sent {Number(modal.row.amount).toFixed(4)} TON</strong> to wallet <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--accent)', wordBreak: 'break-all' }}>{modal.row.wallet_address}</code>.<br /><br />
                   This will mark the withdrawal as <strong>Paid</strong> and record the timestamp.
                 </>
               : <>
-                  This will <strong>reject</strong> withdrawal #{modal.row.id} and <strong>refund ${Number(modal.row.amount).toFixed(4)} USDT</strong> back to the user's balance.
+                  This will <strong>reject</strong> withdrawal #{modal.row.id} and <strong>refund {Number(modal.row.amount).toFixed(4)} TON</strong> back to the user's balance.
                 </>
           }
           confirmLabel={modal.action === 'approve' ? '✓ Confirm Paid' : '✕ Reject & Refund'}

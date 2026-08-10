@@ -1,6 +1,6 @@
-# 🚀 AdShare — Tasks & Rewards
+# 🚀 Blitz Game Zone — Tasks & Rewards
 
-A full-stack Telegram Mini App where users watch rewarded ads and earn USDT, with 60/40 revenue sharing between users and the platform.
+A full-stack Telegram Mini App where users watch rewarded ads and earn TON, with 60/40 revenue sharing between users and the platform.
 
 ## 📁 Project Structure
 
@@ -43,10 +43,10 @@ npm run dev
 
 ## 💡 Revenue Model
 Per ad watched:
-- User earns:      60% of AD_REWARD_USDT (default $0.006)
-- Platform keeps:  40% of AD_REWARD_USDT (default $0.004)
+- User earns:      60% of AD_REWARD_TON (default 0.0006)
+- Platform keeps:  40% of AD_REWARD_TON (default 0.0004)
 
-Withdrawals are manual — admin sends USDT via Binance, marks paid in dashboard.
+Withdrawals are manual — admin sends TON via Tonkeeper, marks paid in dashboard.
 
 ## 🌐 Admin Panel
 Access at http://localhost:3001/admin (or your domain /admin)

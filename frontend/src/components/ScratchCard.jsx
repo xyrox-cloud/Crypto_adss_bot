@@ -26,7 +26,7 @@ const ScratchCard = ({ onComplete }) => {
         setResult(data);
         
         if (data.reward > 0) {
-          showToast(`You won ${data.reward} USDT!`, 'success');
+          showToast(`You won ${data.reward} TON!`, 'success');
         } else {
           showToast(data.message || 'Better luck next time!', 'info');
         }
@@ -54,7 +54,7 @@ const ScratchCard = ({ onComplete }) => {
               {result.reward > 0 ? (
                 <>
                   <div className="text-3xl mb-1">🎉</div>
-                  <div className="text-xl font-extrabold text-success">{result.reward} USDT</div>
+                  <div className="text-xl font-extrabold text-success">{result.reward} TON</div>
                 </>
               ) : (
                 <>

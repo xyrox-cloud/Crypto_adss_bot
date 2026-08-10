@@ -43,7 +43,7 @@ const SpinWheel = ({ onComplete }) => {
         setIsSpinning(false);
         setResult(data);
         if (data.reward > 0) {
-          showToast(`You won ${data.reward} USDT!`, 'success');
+          showToast(`You won ${data.reward} TON!`, 'success');
         } else {
           showToast(data.message || 'Better luck next time!', 'info');
         }
@@ -94,7 +94,7 @@ const SpinWheel = ({ onComplete }) => {
 
       {result !== null && (
         <div className={`mt-4 text-center font-bold animate-pulse ${result.reward > 0 ? 'text-success' : 'text-textmuted'}`}>
-          {result.reward > 0 ? `You won ${result.reward} USDT!` : (result.message || 'Better luck next time!')}
+          {result.reward > 0 ? `You won ${result.reward} TON!` : (result.message || 'Better luck next time!')}
         </div>
       )}
     </div>

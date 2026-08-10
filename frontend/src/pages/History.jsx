@@ -18,7 +18,7 @@ const ArrowDownIcon = () => (
 
 /* ── Relative time helper ────────────────── */
 const relativeTime = (dateStr) => {
-  const diff = Date.now() - new Date(dateStr).getTime();
+  const diff = Date.now() - new Date(typeof dateStr === 'string' && !dateStr.includes('T') ? dateStr.replace(' ', 'T') + 'Z' : dateStr).getTime();
   const m = Math.floor(diff / 60000);
   if (m < 1)  return 'just now';
   if (m < 60) return `${m}m ago`;
@@ -106,11 +106,11 @@ const History = () => {
                 </div>
                 <div className="tx-info">
                   <div className="tx-title">Ad Watched</div>
-                  <div className="tx-time">{relativeTime(w.timestamp)} · {new Date(w.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</div>
+                  <div className="tx-time">{relativeTime(w.timestamp)} &middot; {new Date(typeof w.timestamp === 'string' && !w.timestamp.includes('T') ? w.timestamp.replace(' ', 'T') + 'Z' : w.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</div>
                 </div>
                 <div className="tx-amount-col">
                   <div className="tx-amount earn">+{Number(w.reward_amount || 0).toFixed(4)}</div>
-                  <div className="tx-unit">USDT</div>
+                  <div className="tx-unit">TON</div>
                 </div>
               </div>
             ))
@@ -128,7 +128,7 @@ const History = () => {
                   <ArrowDownIcon />
                 </div>
                 <div className="tx-info">
-                  <div className="tx-title">{Number(w.amount || 0).toFixed(2)} USDT</div>
+                  <div className="tx-title">{Number(w.amount || 0).toFixed(2)} TON</div>
                   <div className="tx-time">
                     {relativeTime(w.requested_at)} · {w.wallet_address.slice(0, 6)}…{w.wallet_address.slice(-4)}
                   </div>

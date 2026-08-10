@@ -69,7 +69,7 @@ bot.start(async (ctx) => {
     await ctx.reply(messages.welcome(first_name), {
       ...Markup.inlineKeyboard([
         [
-          Markup.button.webApp('🚀 Open AdShare App', MINI_APP_URL),
+          Markup.button.webApp('🚀 Open Blitz Game Zone', MINI_APP_URL),
           Markup.button.callback('💰 Check Balance', 'check_balance')
         ],
         [
@@ -98,7 +98,7 @@ bot.command('balance', async (ctx) => {
     await ctx.reply(messages.balance(balance), {
       parse_mode: 'Markdown',
       ...Markup.inlineKeyboard([
-        [Markup.button.webApp('🚀 Open AdShare App', MINI_APP_URL)]
+        [Markup.button.webApp('🚀 Open Blitz Game Zone', MINI_APP_URL)]
       ])
     });
   }
@@ -118,10 +118,10 @@ bot.command('withdraw', async (ctx) => {
     return;
   }
   
-  if (balance < 2) {
+  if (balance < 0.5) {
     await ctx.reply(messages.withdrawInsufficient(), {
       ...Markup.inlineKeyboard([
-        [Markup.button.webApp('🚀 Open AdShare App', MINI_APP_URL)]
+        [Markup.button.webApp('🚀 Open Blitz Game Zone', MINI_APP_URL)]
       ])
     });
   } else {
@@ -149,7 +149,7 @@ bot.action('check_balance', async (ctx) => {
     await ctx.reply(messages.balance(balance), {
       parse_mode: 'Markdown',
       ...Markup.inlineKeyboard([
-        [Markup.button.webApp('🚀 Open AdShare App', MINI_APP_URL)]
+        [Markup.button.webApp('🚀 Open Blitz Game Zone', MINI_APP_URL)]
       ])
     });
   }

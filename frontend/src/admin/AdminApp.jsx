@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { LayoutDashboard, Wallet, Users, LifeBuoy, Settings, Activity, LogOut } from 'lucide-react';
 import { AdminToastProvider } from './AdminToast';
 import './admin.css';
 import AdminDashboard from './pages/AdminDashboard';
@@ -72,32 +73,39 @@ export default function AdminApp() {
       <div className="admin-layout admin-root">
         <aside className="admin-sidebar">
           <div className="admin-sidebar-logo">
-            <div className="admin-logo-mark">AdShare</div>
+            <div className="admin-logo-mark">BGZ</div>
             <div className="admin-logo-sub">Admin Panel</div>
           </div>
           <nav className="admin-nav">
             <NavLink to="/admin" end className={({ isActive }) => `admin-nav-item ${isActive ? 'active' : ''}`}>
+              <LayoutDashboard size={18} />
               <span>Dashboard</span>
             </NavLink>
             <NavLink to="/admin/withdrawals" className={({ isActive }) => `admin-nav-item ${isActive ? 'active' : ''}`}>
+              <Wallet size={18} />
               <span>Withdrawals</span>
             </NavLink>
             <NavLink to="/admin/users" className={({ isActive }) => `admin-nav-item ${isActive ? 'active' : ''}`}>
+              <Users size={18} />
               <span>Users</span>
             </NavLink>
             <NavLink to="/admin/support" className={({ isActive }) => `admin-nav-item ${isActive ? 'active' : ''}`}>
+              <LifeBuoy size={18} />
               <span>Support</span>
             </NavLink>
             <NavLink to="/admin/settings" className={({ isActive }) => `admin-nav-item ${isActive ? 'active' : ''}`}>
+              <Settings size={18} />
               <span>Settings</span>
             </NavLink>
             <NavLink to="/admin/activity-log" className={({ isActive }) => `admin-nav-item ${isActive ? 'active' : ''}`}>
+              <Activity size={18} />
               <span>Activity Log</span>
             </NavLink>
           </nav>
           <div className="admin-sidebar-footer">
             <button className="admin-logout-btn" onClick={handleLogout}>
-              ⎋ <span>Sign Out</span>
+              <LogOut size={18} />
+              <span>Sign Out</span>
             </button>
           </div>
         </aside>

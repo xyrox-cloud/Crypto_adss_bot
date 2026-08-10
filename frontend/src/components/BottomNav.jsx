@@ -1,11 +1,12 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Trophy, User, Coins } from 'lucide-react';
+import { Home, Trophy, User, Coins, Target } from 'lucide-react';
 
 const navItems = [
   { to: '/', label: 'HOME', Icon: Home },
+  { to: '/game', label: 'PLAY', Icon: Target },
   { to: '/earn', label: 'EARN', Icon: Coins },
-  { to: '/leaderboard', label: 'LEADERBOARD', Icon: Trophy },
+  { to: '/leaderboard', label: 'LEADER', Icon: Trophy },
   { to: '/menu', label: 'PROFILE', Icon: User },
 ];
 
@@ -17,7 +18,7 @@ const BottomNav = () => (
         to={to}
         end={to === '/'}
         className={({ isActive }) =>
-          `flex flex-col items-center justify-center w-1/4 py-1.5 px-1 rounded-2xl transition-colors duration-200 ${
+          `flex flex-col items-center justify-center w-1/5 py-1.5 px-1 rounded-2xl transition-colors duration-200 ${
             isActive ? 'bg-white text-black' : 'text-[#8A8A8A] hover:text-white'
           }`
         }

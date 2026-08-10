@@ -13,15 +13,15 @@ router.post('/request', extractTelegramUser, (req, res) => {
 
     // Read live settings
     const settings = getSettings();
-    const minWithdrawal = parseFloat(settings.min_withdrawal ?? 2.00);
+    const minWithdrawal = parseFloat(settings.min_withdrawal ?? 0.50);
 
-    if (!wallet_address || !/^0x[a-fA-F0-9]{40}$/.test(wallet_address)) {
-      return res.status(400).json({ error: 'Invalid wallet address (must be a valid BEP20 address)' });
+    if (!wallet_address || !/^(EQ|UQ)[a-zA-Z0-9_-]{46}$/.test(wallet_address)) {
+      return res.status(400).json({ error: 'Invalid wallet address (must be a valid TON address)' });
     }
 
     const withdrawAmount = parseFloat(amount);
     if (isNaN(withdrawAmount) || withdrawAmount < minWithdrawal) {
-      return res.status(400).json({ error: `Minimum withdrawal amount is $${minWithdrawal} USDT` });
+      return res.status(400).json({ error: `Minimum withdrawal amount is ${minWithdrawal} TON` });
     }
 
     const user = db.prepare('SELECT id, balance, banned FROM users WHERE telegram_id = ?').get(telegramId);

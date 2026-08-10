@@ -17,13 +17,12 @@ function generatePayoutMessage(amount, userIdentifier, walletAddress, txHash = n
     : walletAddress;
   
   let msg = `✅ <b>PAYOUT SUCCESSFUL</b>\n\n`;
-  msg += `💰 <b>Amount:</b> ${parseFloat(amount).toFixed(2)} USDT\n`;
+  msg += `💰 <b>Amount:</b> ${parseFloat(amount).toFixed(4)} TON\n`;
   msg += `👤 <b>User:</b> ${userIdentifier}\n`;
-  msg += `🌐 <b>Network:</b> BEP20\n`;
   msg += `📮 <b>To:</b> <code>${displayWallet}</code>\n`;
   
   if (txHash) {
-    msg += `🔍 <b>Tx:</b> <a href="https://bscscan.com/tx/${txHash}">${txHash}</a>`;
+    msg += `🔍 <b>Tx:</b> <a href="https://tonviewer.com/transaction/${txHash}">${txHash}</a>`;
   }
   
   return msg;
@@ -127,7 +126,7 @@ function requireSuperAdmin(req, res, next) {
 router.get('/setup-2fa', requireAdmin, requireSuperAdmin, async (req, res) => {
   try {
     const secret = speakeasy.generateSecret({
-      name: 'AdShare Admin',
+      name: 'Blitz Game Zone Admin',
     });
     const db = getDb();
     

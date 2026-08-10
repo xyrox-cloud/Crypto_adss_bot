@@ -3,7 +3,7 @@ import { getAdminUsers, adjustBalance, setBanStatus } from '../../api/adminApi';
 import { useAdminToast } from '../AdminToast';
 import ConfirmModal from '../ConfirmModal';
 
-const fmtDate = d => d ? new Date(d).toLocaleDateString([], { dateStyle: 'medium' }) : '—';
+const fmtDate = d => d ? new Date(d.replace(' ', 'T') + 'Z').toLocaleDateString([], { dateStyle: 'medium' }) : '—';
 const fmtMoney = n => `$${Number(n || 0).toFixed(4)}`;
 
 export default function AdminUsers() {
@@ -47,7 +47,7 @@ export default function AdminUsers() {
     const delta = parseFloat(vals.delta);
     if (isNaN(delta)) throw new Error('Enter a valid number');
     await adjustBalance(modal.user.id, { delta, reason: vals.reason });
-    toast(`Balance adjusted by ${delta >= 0 ? '+' : ''}${delta.toFixed(4)} USDT`, 'success');
+    toast(`Balance adjusted by ${delta >= 0 ? '+' : ''}${delta.toFixed(4)} TON`, 'success');
     setModal(null);
     load(pagination.page);
   };
@@ -171,7 +171,7 @@ export default function AdminUsers() {
           title={`Adjust Balance — ${modal.user.username ? '@' + modal.user.username : modal.user.first_name}`}
           description={
             <>
-              Current balance: <strong style={{ color: 'var(--gold)', fontFamily: 'var(--font-mono)' }}>{fmtMoney(modal.user.balance)} USDT</strong>
+              Current balance: <strong style={{ color: 'var(--gold)', fontFamily: 'var(--font-mono)' }}>{fmtMoney(modal.user.balance)} TON</strong>
               <br />Enter a positive number to add, negative to deduct. A mandatory reason will be logged.
             </>
           }
@@ -179,7 +179,7 @@ export default function AdminUsers() {
           onConfirm={handleBalanceAdjust}
           onCancel={() => setModal(null)}
           extraFields={[
-            { key: 'delta', label: 'Delta (USDT)', placeholder: 'e.g. 0.50 or -0.25', type: 'number', step: '0.0001', required: true },
+            { key: 'delta', label: 'Delta (TON)', placeholder: 'e.g. 0.50 or -0.25', type: 'number', step: '0.0001', required: true },
             { key: 'reason', label: 'Reason', placeholder: 'Support case #, dispute details…', type: 'textarea', required: true },
           ]}
         />
