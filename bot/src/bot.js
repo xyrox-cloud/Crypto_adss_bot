@@ -68,13 +68,7 @@ bot.start(async (ctx) => {
     // Reply with welcome message and inline keyboard
     await ctx.reply(messages.welcome(first_name), {
       ...Markup.inlineKeyboard([
-        [
-          Markup.button.webApp('🚀 Open Blitz Game Zone', MINI_APP_URL),
-          Markup.button.callback('💰 Check Balance', 'check_balance')
-        ],
-        [
-          Markup.button.url('📢 Join our channel', 'https://t.me/your_channel')
-        ]
+        [Markup.button.webApp('🎮 Play Blitz', MINI_APP_URL)]
       ])
     });
     
@@ -164,7 +158,7 @@ bot.launch().then(async () => {
     const result = await bot.telegram.setChatMenuButton({
       menuButton: {
         type: 'web_app',
-        text: '🚀 Open App',
+        text: '🎮 Play',
         web_app: { url: MINI_APP_URL }
       }
     });

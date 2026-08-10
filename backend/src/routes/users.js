@@ -35,13 +35,30 @@ router.post('/register', (req, res) => {
       }
 
       const newRefCode = generateReferralCode();
-      const insertUser = db.prepare(`
-        INSERT INTO users (telegram_id, username, first_name, photo_url, referral_code, referred_by)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `);
       
-      const info = insertUser.run(telegram_id, username, first_name, photo_url || null, newRefCode, validReferral);
-      user = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
+      const tx = db.transaction(() => {
+        let initialScore = 0;
+        
+        if (validReferral) {
+          initialScore = 100; // New user gets 100 points
+          const referrerRow = db.prepare('SELECT id FROM users WHERE telegram_id = ?').get(validReferral);
+          if (referrerRow) {
+            db.prepare('UPDATE users SET all_time_score = all_time_score + 250, referral_count = referral_count + 1 WHERE id = ?').run(referrerRow.id);
+            db.prepare('INSERT INTO activity_log (action, details) VALUES (?, ?)').run('referral_bonus_granted', `Referrer ${validReferral} earned 250 pts for referring ${telegram_id}`);
+          }
+        }
+
+        const insertUser = db.prepare(`
+          INSERT INTO users (telegram_id, username, first_name, photo_url, referral_code, referred_by, all_time_score, referral_bonus_paid)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        const info = insertUser.run(telegram_id, username, first_name, photo_url || null, newRefCode, validReferral, initialScore, 1);
+        return info.lastInsertRowid;
+      });
+      
+      const newId = tx();
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(newId);
     } else {
       // Update last_seen and other details if needed
       db.prepare('UPDATE users SET username = ?, first_name = ?, photo_url = ?, last_seen = CURRENT_TIMESTAMP WHERE telegram_id = ?')

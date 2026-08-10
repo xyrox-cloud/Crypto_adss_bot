@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
 import Earn from './pages/Earn';
 import History from './pages/History';
@@ -26,6 +26,7 @@ function App() {
   const [initializing, setInitializing] = useState(true);
   const [initialUser, setInitialUser] = useState(null);
   const [channelStatus, setChannelStatus] = useState(null);
+  const location = useLocation();
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
@@ -97,7 +98,7 @@ function App() {
       <UserProvider initialUserData={initialUser}>
         <div className="min-h-screen w-full max-w-xl mx-auto relative bg-background">
           <div className="w-full h-full">
-            <ErrorBoundary>
+            <ErrorBoundary key={location.pathname}>
               <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/earn" element={<Earn />} />

@@ -95,7 +95,7 @@ const Leaderboard = () => {
         </div>
         <div className="text-right">
           <div className="text-2xl font-extrabold text-black">{myData?.score || 0}</div>
-          <div className="text-[10px] font-bold text-black/60">ADS</div>
+          <div className="text-[10px] font-bold text-black/60">PTS</div>
         </div>
       </div>
 
