@@ -116,7 +116,7 @@ function initDb() {
   }
   
   // Ensure super admin is always marked as admin in DB
-  const superAdmin = process.env.SUPER_ADMIN_ID || '8433855679';
+  const superAdmin = process.env.SUPER_ADMIN_ID;
   if (superAdmin) {
     db.prepare('UPDATE users SET is_admin = 1 WHERE telegram_id = ?').run(superAdmin);
   }

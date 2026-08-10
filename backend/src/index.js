@@ -8,6 +8,7 @@ const rateLimit = require('express-rate-limit');
 const { initDb } = require('./db/database');
 
 const usersRouter = require('./routes/users');
+const authRouter = require('./routes/auth');
 const adsRouter = require('./routes/ads');
 const withdrawalsRouter = require('./routes/withdrawals');
 const adminRouter = require('./routes/admin');
@@ -62,6 +63,7 @@ app.get('/superadmin', (req, res) => {
 });
 
 // API Routes
+app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/ads', adsRouter);
 app.use('/api/withdrawals', withdrawalsRouter);
