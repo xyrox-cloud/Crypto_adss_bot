@@ -1,0 +1,128 @@
+--- backend/src/routes/ads.js
++++ backend/src/routes/ads.js
+@@ -141,6 +141,127 @@
+   }
+ });
+ 
++// ── POST /api/ads/claim (Frontend Ad Claim) ──────────────────────────────────
++router.post('/claim', extractTelegramUser, rewardLimiter, (req, res) => {
++  try {
++    const db = getDb();
++    const telegramId = req.telegramUser.id;
++
++    // 1. Look up user
++    const user = db.prepare(
++      'SELECT id, balance, total_earned, total_ads_watched, banned FROM users WHERE telegram_id = ?'
++    ).get(telegramId);
++
++    if (!user) return res.status(400).json({ error: 'User not found' });
++    if (user.banned) return res.status(403).json({ error: 'Account is banned' });
++
++    // 2. Read live settings from DB
++    const settings = getSettings();
++    const maxAdsPerDay    = Math.floor(settings.max_ads_per_day  ?? 20);
++    const sharedConfig    = require('../../../config.json');
++    const rewardUsdt      = sharedConfig.REWARD_PER_AD;
++    
++    const userSplitPct    = parseFloat(settings.revenue_split ?? (100 - parseFloat(settings.platform_cut_pct ?? 40)));
++    const cooldownSecs    = parseInt(settings.ad_cooldown_secs   ?? 30, 10);
++
++    // 3. Daily limit check
++    const todayCount = db.prepare(`
++      SELECT COUNT(*) as count FROM ad_watches
++      WHERE user_id = ? AND date(timestamp) = date('now')
++    `).get(user.id).count;
++
++    if (todayCount >= maxAdsPerDay) {
++      return res.status(429).json({ error: `Daily ad limit reached (${maxAdsPerDay}/day)` });
++    }
++
++    // Hourly limit check
++    const maxAdsPerHour = Math.floor(settings.max_ads_per_hour ?? 5);
++    const hourCount = db.prepare(`
++      SELECT COUNT(*) as count FROM ad_watches
++      WHERE user_id = ? AND timestamp >= datetime('now', '-1 hour')
++    `).get(user.id).count;
++
++    if (hourCount >= maxAdsPerHour) {
++      return res.status(429).json({ error: `Hourly ad limit reached (${maxAdsPerHour}/hour)` });
++    }
++
++    // Cooldown check
++    if (cooldownSecs > 0) {
++      const lastWatch = db.prepare(`
++        SELECT timestamp FROM ad_watches
++        WHERE user_id = ?
++        ORDER BY timestamp DESC
++        LIMIT 1
++      `).get(user.id);
++
++      if (lastWatch) {
++        const secsSinceLast = (Date.now() - new Date(lastWatch.timestamp).getTime()) / 1000;
++        if (secsSinceLast < cooldownSecs) {
++          const waitSecs = Math.ceil(cooldownSecs - secsSinceLast);
++          return res.status(429).json({ error: `Please wait ${waitSecs}s before watching another ad` });
++        }
++      }
++    }
++
++    // 4. Calculate shares
++    const userShare    = rewardUsdt * (userSplitPct / 100);
++    const platformCut  = rewardUsdt - userShare;
++    const ipAddress    = req.ip || req.connection?.remoteAddress;
++
++    // 5. Atomic transaction
++    const watchTx = db.transaction(() => {
++      const watchInfo = db.prepare(`
++        INSERT INTO ad_watches (user_id, telegram_id, reward_amount, platform_cut, ip_address, source)
++        VALUES (?, ?, ?, ?, ?, ?)
++      `).run(user.id, telegramId, userShare, platformCut, ipAddress, 'frontend_claim');
++
++      db.prepare(`
++        INSERT INTO ad_rewards (user_id, amount, ip)
++        VALUES (?, ?, ?)
++      `).run(user.id, userShare, ipAddress);
++
++      db.prepare(`
++        UPDATE users
++        SET balance = balance + ?,
++            total_earned = total_earned + ?,
++            total_ads_watched = total_ads_watched + 1,
++            last_seen = CURRENT_TIMESTAMP
++        WHERE id = ?
++      `).run(userShare, userShare, user.id);
++
++      db.prepare(`
++        INSERT INTO platform_revenue (ad_watch_id, amount) VALUES (?, ?)
++      `).run(watchInfo.lastInsertRowid, platformCut);
++
++      db.prepare(`
++        INSERT INTO activity_log (action, details) VALUES (?, ?)
++      `).run('ad_reward_granted', `User ${telegramId} earned ${userShare} TON via frontend claim`);
++
++      return watchInfo.lastInsertRowid;
++    });
++
++    watchTx();
++
++    const updatedUser = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
++    const { processReferralBonus } = require('../db/database');
++    processReferralBonus(db, updatedUser, ipAddress);
++
++    // Return new user balance and stats
++    res.status(200).json({ 
++      success: true, 
++      reward: userShare,
++      new_balance: updatedUser.balance,
++      total_earned: updatedUser.total_earned
++    });
++
++  } catch (err) {
++    console.error('Frontend ad claim error:', err);
++    res.status(500).json({ error: 'Failed to process ad reward' });
++  }
++});
++
+ // ── GET /api/ads/stats ───────────────────────────────────────────────────────
+ router.get('/stats', extractTelegramUser, (req, res) => {
+   try {

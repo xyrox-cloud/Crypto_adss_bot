@@ -24,6 +24,7 @@ api.interceptors.request.use((config) => {
 export const registerUser = (userData) => api.post('/users/register', userData);
 export const getMe = () => api.get('/users/me');
 export const getAdStats = () => api.get('/ads/stats');
+export const claimAdReward = () => api.post('/ads/claim');
 export const getAdHistory = (params = {}) => api.get('/ads/history', { params });
 export const requestWithdrawal = (data) => api.post('/withdrawals/request', data);
 export const getWithdrawalHistory = () => api.get('/withdrawals/history');

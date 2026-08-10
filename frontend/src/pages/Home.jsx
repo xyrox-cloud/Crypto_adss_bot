@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { useToast } from '../context/ToastContext';
-import { getAdStats, submitQuestClaim } from '../api/api';
+import { getAdStats, submitQuestClaim, claimAdReward } from '../api/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SpinWheel from '../components/SpinWheel';
 import ScratchCard from '../components/ScratchCard';
@@ -13,7 +13,7 @@ import createAdHandler from 'monetag-tg-sdk';
 const MAX_ADS_PER_DAY = parseInt(import.meta.env.VITE_MAX_ADS_PER_DAY || '20', 10);
 
 const Home = () => {
-  const { user, refreshUser } = useUser();
+  const { user, setUser, refreshUser } = useUser();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -68,9 +68,24 @@ const Home = () => {
       await adHandler();
       
       showToast('✅ Ad watched! Reward is being credited.', 'success');
-      await new Promise(r => setTimeout(r, 1500));
-      await refreshUser();
-      fetchStats();
+      
+      const res = await claimAdReward();
+      if (res.data && res.data.success) {
+        setUser(prev => ({ 
+          ...prev, 
+          balance: res.data.new_balance, 
+          total_earned: res.data.total_earned 
+        }));
+        setStats(prev => ({
+          ...prev,
+          ads_today: prev.ads_today + 1,
+          ads_this_week: prev.ads_this_week + 1,
+          total_earned: res.data.total_earned
+        }));
+      } else {
+        await refreshUser();
+        fetchStats();
+      }
     } catch (err) {
       console.error(err);
       const serverMsg = err?.response?.data?.error;
