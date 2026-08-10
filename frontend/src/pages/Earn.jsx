@@ -18,7 +18,7 @@ const Earn = () => {
   const ENABLE_REFERRALS = true;
   
   const [loadingAd, setLoadingAd] = useState(false);
-  const [stats, setStats] = useState({ ads_today: 0, ads_this_week: 0, total_earned: 0 });
+  const [stats, setStats] = useState({ ads_today: 0, ads_this_week: 0, total_earned: 0, reward_per_ad: REWARD_PER_AD });
   const [inviteExpanded, setInviteExpanded] = useState(false);
 
   const botUsername = import.meta.env.VITE_BOT_USERNAME || 'Blitz_Game_Zone_bot';
@@ -46,7 +46,7 @@ const Earn = () => {
   const fetchStats = async () => {
     try {
       const res = await getAdStats();
-      setStats(res.data || { ads_today: 0, ads_this_week: 0, total_earned: 0 });
+      setStats(res.data || { ads_today: 0, ads_this_week: 0, total_earned: 0, reward_per_ad: REWARD_PER_AD });
     } catch (err) {
       console.error(err);
     }
@@ -55,6 +55,36 @@ const Earn = () => {
   const handleWatchAd = async () => {
     if (stats.ads_today >= MAX_ADS_PER_DAY) {
       showToast(`Daily limit reached (${MAX_ADS_PER_DAY} ads/day)`, 'error');
+      return;
+    }
+
+    if (user?.is_admin) {
+      showToast('Ads disabled for admin! Reward credited directly.', 'success');
+      setLoadingAd(true);
+      try {
+        const res = await claimAdReward();
+        if (res.data && res.data.success) {
+          setUser(prev => ({ 
+            ...prev, 
+            balance: res.data.new_balance, 
+            total_earned: res.data.total_earned 
+          }));
+          setStats(prev => ({
+            ...prev,
+            ads_today: prev.ads_today + 1,
+            ads_this_week: prev.ads_this_week + 1,
+            total_earned: res.data.total_earned
+          }));
+        } else {
+          await refreshUser();
+          fetchStats();
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Error claiming reward', 'error');
+      } finally {
+        setLoadingAd(false);
+      }
       return;
     }
 
@@ -128,6 +158,7 @@ const Earn = () => {
   const adsRemaining = Math.max(0, MAX_ADS_PER_DAY - stats.ads_today);
   const balance = Number(user?.balance || 0);
   const lifetime = Number(user?.total_earned || 0);
+  const currentRewardPerAd = stats.reward_per_ad ?? REWARD_PER_AD;
 
   return (
     <div className="pb-24 px-4 pt-4">
@@ -175,7 +206,7 @@ const Earn = () => {
             </div>
             <div>
               <div className="font-bold text-white text-sm">1. Watch ads</div>
-              <div className="text-primary text-[11px] font-bold mt-0.5">{REWARD_PER_AD} TON per task</div>
+              <div className="text-primary text-[11px] font-bold mt-0.5">{currentRewardPerAd} TON per task</div>
             </div>
           </div>
           <div className="bg-[#0088CC]/20 text-[#0088CC] px-2.5 py-1 rounded-md text-[10px] font-extrabold">
@@ -295,7 +326,7 @@ const Earn = () => {
       {/* STATS STRIP */}
       <div className="grid grid-cols-3 gap-2 mb-6">
         <div className="bg-cardbg border border-cardborder rounded-lg p-3 text-center">
-          <div className="text-white text-sm font-extrabold mb-1">{REWARD_PER_AD}</div>
+          <div className="text-white text-sm font-extrabold mb-1">{currentRewardPerAd}</div>
           <div className="text-textmuted text-[9px] font-bold uppercase">TON / Task</div>
         </div>
         <div className="bg-cardbg border border-cardborder rounded-lg p-3 text-center">

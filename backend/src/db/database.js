@@ -37,7 +37,8 @@ function initDb() {
       daily_streak INTEGER DEFAULT 0,
       last_minigame_claim DATETIME,
       last_scratch_claim DATETIME,
-      referral_bonus_paid INTEGER DEFAULT 0
+      referral_bonus_paid INTEGER DEFAULT 0,
+      is_admin INTEGER DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS ad_watches (
@@ -110,6 +111,14 @@ function initDb() {
 
   // Add new columns to existing users table if they don't exist (migration)
   const userCols = db.pragma('table_info(users)').map(c => c.name);
+  if (!userCols.includes('is_admin')) {
+    db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0');
+    // Set admin based on SUPER_ADMIN_ID
+    const superAdmin = process.env.SUPER_ADMIN_ID;
+    if (superAdmin) {
+      db.prepare('UPDATE users SET is_admin = 1 WHERE telegram_id = ?').run(superAdmin);
+    }
+  }
   if (!userCols.includes('banned'))
     db.exec('ALTER TABLE users ADD COLUMN banned INTEGER DEFAULT 0');
   if (!userCols.includes('total_ads_watched'))
@@ -154,7 +163,7 @@ function initDb() {
   // Seed default settings if not present
   const seedSettings = db.prepare(`INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)`);
   const seedMany = db.transaction(() => {
-    seedSettings.run('reward_per_ad',      process.env.AD_REWARD_TON    || '0.001',  'TON paid out per ad watched (user + platform share combined)');
+    seedSettings.run('reward_per_ad',      process.env.AD_REWARD_TON    || '0.01',   'TON paid out per ad watched');
     seedSettings.run('platform_cut_pct',   '40',                                     'Platform keeps this % of each ad reward');
     seedSettings.run('revenue_split',      '60',                                     'User % cut of the ad reward');
     seedSettings.run('max_ads_per_day',    process.env.MAX_ADS_PER_DAY  || '20',    'Max ads a user can watch per calendar day');

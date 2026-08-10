@@ -80,7 +80,7 @@ router.get('/me', extractTelegramUser, (req, res) => {
       SELECT balance, total_earned, referral_code, created_at, first_name, username,
              blitz_rounds, blitz_rounds_today, top_score, total_score_today, all_time_score,
              last_daily_claim, daily_streak, last_minigame_claim,
-             quest_rounds_claimed, quest_score_claimed, quest_grinder_claimed, referral_count
+             quest_rounds_claimed, quest_score_claimed, quest_grinder_claimed, referral_count, is_admin
       FROM users WHERE telegram_id = ?
     `).get(req.telegramUser.id);
 

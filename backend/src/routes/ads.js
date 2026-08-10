@@ -42,11 +42,7 @@ router.get('/reward', rewardLimiter, (req, res) => {
     // 3. Read live settings from DB
     const settings = getSettings();
     const maxAdsPerDay    = Math.floor(settings.max_ads_per_day  ?? 20);
-    const sharedConfig    = require('../../../config.json');
-    const rewardUsdt      = sharedConfig.REWARD_PER_AD;
-    
-    // Fetch revenue_split or calculate from platform_cut_pct
-    const userSplitPct    = parseFloat(settings.revenue_split ?? (100 - parseFloat(settings.platform_cut_pct ?? 40)));
+    const rewardPerAd     = parseFloat(settings.reward_per_ad    ?? 0.01);
     const cooldownSecs    = parseInt(settings.ad_cooldown_secs   ?? 30, 10);
 
     // 4. Daily limit check
@@ -89,8 +85,8 @@ router.get('/reward', rewardLimiter, (req, res) => {
     }
 
     // 5. Calculate shares
-    const userShare    = rewardUsdt * (userSplitPct / 100);
-    const platformCut  = rewardUsdt - userShare;
+    const userShare    = rewardPerAd;
+    const platformCut  = userShare * (parseFloat(settings.platform_cut_pct ?? 40) / 100);
     const ipAddress    = req.ip || req.connection?.remoteAddress;
 
     // 6. Atomic transaction to credit user and record ad watch / reward
@@ -154,9 +150,7 @@ router.post('/claim', extractTelegramUser, rewardLimiter, (req, res) => {
 
     const settings = getSettings();
     const maxAdsPerDay = Math.floor(settings.max_ads_per_day ?? 20);
-    const sharedConfig = require('../../../config.json');
-    const rewardUsdt = sharedConfig.REWARD_PER_AD;
-    const userSplitPct = parseFloat(settings.revenue_split ?? (100 - parseFloat(settings.platform_cut_pct ?? 40)));
+    const rewardPerAd = parseFloat(settings.reward_per_ad ?? 0.01);
     const cooldownSecs = parseInt(settings.ad_cooldown_secs ?? 30, 10);
 
     const todayCount = db.prepare(`SELECT COUNT(*) as count FROM ad_watches WHERE user_id = ? AND date(timestamp) = date('now')`).get(user.id).count;
@@ -177,8 +171,8 @@ router.post('/claim', extractTelegramUser, rewardLimiter, (req, res) => {
       }
     }
 
-    const userShare = rewardUsdt * (userSplitPct / 100);
-    const platformCut = rewardUsdt - userShare;
+    const userShare = rewardPerAd;
+    const platformCut = userShare * (parseFloat(settings.platform_cut_pct ?? 40) / 100);
     const ipAddress = req.ip || req.connection?.remoteAddress;
 
     const watchTx = db.transaction(() => {
@@ -222,10 +216,13 @@ router.get('/stats', extractTelegramUser, (req, res) => {
       WHERE user_id = ? AND timestamp >= datetime('now', '-7 days')
     `).get(user.id).count;
 
+    const settings = getSettings();
+
     res.json({
       ads_today: todayCount,
       ads_this_week: weekCount,
-      total_earned: user.total_earned
+      total_earned: user.total_earned,
+      reward_per_ad: parseFloat(settings.reward_per_ad ?? 0.01)
     });
 
   } catch (err) {

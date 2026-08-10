@@ -118,12 +118,12 @@ export default function AdminSettings() {
     </div>
   );
 
-  // Derived display: user share percentage
+  // Derived display: net user reward + tracked platform margin
   const platformPct = parseFloat(settings.platform_cut_pct ?? 40);
-  const userPct = 100 - platformPct;
   const rewardPerAd = parseFloat(settings.reward_per_ad ?? 0.01);
-  const userShare = (rewardPerAd * userPct / 100).toFixed(5);
+  const userShare = rewardPerAd.toFixed(5);
   const platformShare = (rewardPerAd * platformPct / 100).toFixed(5);
+  const grossTotal = (rewardPerAd + (rewardPerAd * platformPct / 100)).toFixed(5);
 
   return (
     <div>
@@ -163,21 +163,21 @@ export default function AdminSettings() {
           </div>
           <div style={{ display: 'flex', gap: 24 }}>
             <div>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Per ad (gross)</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 18, color: 'var(--text-primary)', fontWeight: 700 }}>
-                ${rewardPerAd.toFixed(5)} TON
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>User ({userPct}%)</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>User Net Reward (100%)</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 18, color: 'var(--success)', fontWeight: 700 }}>
-                ${userShare}
+                {userShare} TON
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Platform ({platformPct}%)</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Platform Margin ({platformPct}%)</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 18, color: 'var(--gold)', fontWeight: 700 }}>
-                ${platformShare}
+                {platformShare} TON
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Est. Total Ad Value</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 18, color: 'var(--text-primary)', fontWeight: 700 }}>
+                {grossTotal} TON
               </div>
             </div>
           </div>
