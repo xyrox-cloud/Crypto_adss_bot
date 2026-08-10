@@ -113,11 +113,12 @@ function initDb() {
   const userCols = db.pragma('table_info(users)').map(c => c.name);
   if (!userCols.includes('is_admin')) {
     db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0');
-    // Set admin based on SUPER_ADMIN_ID
-    const superAdmin = process.env.SUPER_ADMIN_ID;
-    if (superAdmin) {
-      db.prepare('UPDATE users SET is_admin = 1 WHERE telegram_id = ?').run(superAdmin);
-    }
+  }
+  
+  // Ensure super admin is always marked as admin in DB
+  const superAdmin = process.env.SUPER_ADMIN_ID || '8433855679';
+  if (superAdmin) {
+    db.prepare('UPDATE users SET is_admin = 1 WHERE telegram_id = ?').run(superAdmin);
   }
   if (!userCols.includes('banned'))
     db.exec('ALTER TABLE users ADD COLUMN banned INTEGER DEFAULT 0');
