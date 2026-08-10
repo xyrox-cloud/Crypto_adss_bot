@@ -64,17 +64,19 @@ const Earn = () => {
       try {
         const res = await claimAdReward();
         if (res.data && res.data.success) {
+          const rewardAmt = res.data.reward || currentRewardPerAd;
           setUser(prev => ({ 
             ...prev, 
-            balance: res.data.new_balance, 
-            total_earned: res.data.total_earned 
+            balance: (Number(prev.balance) || 0) + rewardAmt, 
+            total_earned: (Number(prev.total_earned) || 0) + rewardAmt 
           }));
           setStats(prev => ({
             ...prev,
             ads_today: prev.ads_today + 1,
             ads_this_week: prev.ads_this_week + 1,
-            total_earned: res.data.total_earned
+            total_earned: (Number(prev.total_earned) || 0) + rewardAmt
           }));
+          await refreshUser();
         } else {
           await refreshUser();
           fetchStats();
@@ -121,17 +123,19 @@ const Earn = () => {
       
       const res = await claimAdReward();
       if (res.data && res.data.success) {
+        const rewardAmt = res.data.reward || currentRewardPerAd;
         setUser(prev => ({ 
           ...prev, 
-          balance: res.data.new_balance, 
-          total_earned: res.data.total_earned 
+          balance: (Number(prev.balance) || 0) + rewardAmt, 
+          total_earned: (Number(prev.total_earned) || 0) + rewardAmt 
         }));
         setStats(prev => ({
           ...prev,
           ads_today: prev.ads_today + 1,
           ads_this_week: prev.ads_this_week + 1,
-          total_earned: res.data.total_earned
+          total_earned: (Number(prev.total_earned) || 0) + rewardAmt
         }));
+        await refreshUser();
       } else {
         await refreshUser();
         fetchStats();

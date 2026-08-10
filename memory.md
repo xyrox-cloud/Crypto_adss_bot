@@ -1,27 +1,38 @@
 # 🧠 Project Memory & Status Tracker
 
 ## 📌 Active Phase
-- **Current Phase**: Phase 2 — Ads Management, Rewarded Ad Verification & Dynamic Balance System
-- **Previous Phase**: Phase 1 — Login/Auth API (COMPLETED ✅)
+- **Current Phase**: Phase 3 — Frontend Earn & Watch Ad Experience
+- **Previous Phases**: 
+  - Phase 1 — Login/Auth API (COMPLETED ✅)
+  - Phase 2 — Ads Management & Rewarded Ad System (COMPLETED ✅)
 
 ---
 
 ## 🏆 Completed Phases & Milestones
 
 ### Phase 1: Login & Authentication API — COMPLETED ✅
-- **Status**: Tested & Production Verified (`200 OK`)
+- **Status**: Production Verified (`200 OK`)
+- **Endpoints**: `POST /api/auth/login`, `GET /api/auth/verify`
+- **Features**: Telegram `initData` HMAC-SHA256 verification, user auto-provisioning, referral handling, 7-day JWT access tokens, `.env` security for `SUPER_ADMIN_ID`.
+
+### Phase 2: Ads Management & Rewarded Ad System — COMPLETED ✅
+- **Status**: Production Verified & Pushed to `origin/main` (`95b1970`)
 - **Endpoints**:
-  - `POST /api/auth/login`: Telegram Mini App `initData` HMAC-SHA256 signature verification, user auto-provisioning, referral code processing, and signed 7-day JWT access token issuance.
-  - `GET /api/auth/verify`: Validates JWT Bearer authorization tokens and returns user identity metadata (`is_admin`, `telegram_id`, etc.).
-- **Security Updates**:
-  - `SUPER_ADMIN_ID` hardcoding completely removed from source files and strictly sourced from environment variables (`.env`).
-  - Rate limiting enforced on login routes (15 requests / 15 mins).
+  - `GET /api/ads/stats`: Fetches dynamic `reward_per_ad`, daily/weekly ad counters, and user total earned.
+  - `POST /api/ads/claim`: Enforces 5/hr and 20/day limits, atomic balance crediting, platform cut tracking, and referral bonus triggers.
+  - `GET /api/ads/reward`: Adsgram webhook integration.
+  - `GET /api/ads/history`: Paginated ad watch history.
 
 ---
 
-## 🚀 Current Focus: Phase 2 — Ads Integration & Rewarded System
+## 🚀 Current Focus: Phase 3 — Frontend Earn & Watch Ad Experience
 
-### Scope & Roadmap for Phase 2:
-1. **Ad Stats & Configuration API**: Dynamic dynamic reward limits, platform cut %, per-ad rates, and system settings.
-2. **Watch Ad & Reward Pipeline**: Monetag / Adsgram in-app ad verification, claim reward handling (`POST /api/ads/claim`), direct balance crediting without unexpected user deductions, and platform margin tracking.
-3. **Admin Controls & Anti-Fraud**: Skip ads for users with `is_admin = 1`, hourly/daily rate limiting per user (max 5/hr, 20/day), and IP/Telegram logging.
+### Scope & Roadmap for Phase 3:
+1. **Dynamic Earn UI (`frontend/src/pages/Earn.jsx`)**:
+   - Fetch real-time `reward_per_ad` dynamically from `/api/ads/stats`.
+   - Render exact reward value (e.g. `0.01 TON`) on watch buttons and headers.
+2. **Admin Ad Bypass & UX Polish**:
+   - Seamlessly handle `is_admin` users in `Earn.jsx` and `App.jsx` to skip Monetag ad triggers while allowing instant test rewards.
+   - Clean micro-animations, streak indicators, and responsive layout.
+3. **State & Balance Sync**:
+   - Synchronize balance and user profile immediately upon successful ad watch.
