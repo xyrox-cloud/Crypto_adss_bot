@@ -11,9 +11,17 @@ router.post('/request', extractTelegramUser, (req, res) => {
     const { amount, wallet_address } = req.body;
     const ipAddress = req.ip || req.connection?.remoteAddress;
 
-    // Read from shared config
-    const sharedConfig = require('../../../config.json');
-    const minWithdrawal = sharedConfig.MIN_WITHDRAWAL;
+    // Read from DB settings with fallback to sharedConfig
+    const settings = getSettings();
+    let minWithdrawal = parseFloat(settings.min_withdrawal);
+    if (isNaN(minWithdrawal) || minWithdrawal <= 0) {
+      try {
+        const sharedConfig = require('../../../config.json');
+        minWithdrawal = parseFloat(sharedConfig.MIN_WITHDRAWAL || '5.00');
+      } catch (e) {
+        minWithdrawal = 5.00;
+      }
+    }
 
     if (!wallet_address || !/^(EQ|UQ)[a-zA-Z0-9_-]{46}$/.test(wallet_address)) {
       return res.status(400).json({ error: 'Invalid wallet address (must be a valid TON address)' });
