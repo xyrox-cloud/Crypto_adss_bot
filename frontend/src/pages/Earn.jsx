@@ -5,6 +5,7 @@ import { useToast } from '../context/ToastContext';
 import { getAdStats } from '../api/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { ChevronDown, ChevronUp, Wallet, Users, Play, CheckCircle } from 'lucide-react';
+import createAdHandler from 'monetag-tg-sdk';
 
 const MAX_ADS_PER_DAY = parseInt(import.meta.env.VITE_MAX_ADS_PER_DAY || '20', 10);
 import { MIN_WITHDRAWAL, REWARD_PER_AD } from '../config';
@@ -59,23 +60,28 @@ const Earn = () => {
 
     setLoadingAd(true);
     try {
-      const blockId = import.meta.env.VITE_ADSGRAM_BLOCK_ID;
-
-      if (!window.Adsgram) {
-        if (import.meta.env.DEV) {
-          await new Promise(r => setTimeout(r, 1200));
-          showToast('✅ Ad watched! Reward will be credited via webhook.', 'success');
-          await new Promise(r => setTimeout(r, 500));
-          await refreshUser();
-          fetchStats();
-          return;
-        }
-        showToast('❌ Ad network not available. Rewards will not be credited.', 'error');
+      const zoneId = import.meta.env.VITE_MONETAG_ZONE_ID;
+      
+      if (import.meta.env.DEV) {
+        await new Promise(r => setTimeout(r, 1200));
+        showToast('✅ Ad watched! Reward will be credited via webhook.', 'success');
+        await new Promise(r => setTimeout(r, 500));
+        await refreshUser();
+        fetchStats();
+        setLoadingAd(false);
         return;
       }
 
-      const adController = window.Adsgram.init({ blockId });
-      await adController.show();
+      if (!zoneId) {
+        showToast('❌ Ad network configuration missing.', 'error');
+        setLoadingAd(false);
+        return;
+      }
+
+      const adHandler = createAdHandler(zoneId);
+      
+      await adHandler();
+      
       showToast('✅ Ad watched! Reward is being credited.', 'success');
       await new Promise(r => setTimeout(r, 1500));
       await refreshUser();
@@ -86,7 +92,7 @@ const Earn = () => {
       if (serverMsg?.includes('limit')) {
         showToast(serverMsg, 'error');
       } else {
-        showToast('Ad skipped — no reward', 'info');
+        showToast('Ad skipped or closed prematurely — no reward', 'info');
       }
     } finally {
       setLoadingAd(false);
