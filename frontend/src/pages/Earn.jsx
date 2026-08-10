@@ -80,7 +80,12 @@ const Earn = () => {
 
       const adHandler = createAdHandler(zoneId);
       
-      await adHandler();
+      try {
+        await adHandler();
+      } catch (err1) {
+        console.warn('Interstitial failed, trying popup fallback...', err1);
+        await adHandler('pop');
+      }
       
       showToast('✅ Ad watched! Reward is being credited.', 'success');
       

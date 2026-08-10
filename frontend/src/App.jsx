@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
+import createAdHandler from 'monetag-tg-sdk';
 import Home from './pages/Home';
 import Earn from './pages/Earn';
 import History from './pages/History';
@@ -68,6 +69,22 @@ function App() {
         ]);
         setInitialUser(regRes.data);
         setChannelStatus(statusRes.data);
+
+        // Initialize Monetag In-App Interstitial
+        const zoneId = import.meta.env.VITE_MONETAG_ZONE_ID;
+        if (zoneId && !import.meta.env.DEV) {
+          const inAppHandler = createAdHandler(zoneId);
+          inAppHandler({
+            type: 'inApp',
+            inAppSettings: {
+              frequency: 2,
+              capping: 0.1,
+              interval: 30,
+              timeout: 5,
+              everyPage: false
+            }
+          });
+        }
       } catch (err) {
         console.error('Initialization failed:', err);
       } finally {
