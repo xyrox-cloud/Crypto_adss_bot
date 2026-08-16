@@ -7,6 +7,10 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const tgId = localStorage.getItem('tg_id');
   const tgUsername = localStorage.getItem('tg_username');
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
   if (tgId) {
     config.headers['x-telegram-id'] = tgId;
   }
@@ -36,5 +40,7 @@ export const getChannelStatus = () => api.get('/users/channel-status');
 export const submitGameReward = (data) => api.post('/users/game-reward', data);
 export const submitQuestClaim = (quest) => api.post('/users/quest-claim', { quest });
 
+
+export const getConfig = () => api.get('/config');
 
 export default api;

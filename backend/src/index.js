@@ -70,6 +70,24 @@ app.use('/api/withdrawals', withdrawalsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/support', supportRouter);
 
+// Public Config Endpoint
+app.get('/api/config', (req, res) => {
+  try {
+    const { getSettings } = require('./db/database');
+    const settings = getSettings();
+    res.json({
+      min_withdrawal: parseFloat(settings.min_withdrawal ?? 0.5),
+      reward_per_ad: parseFloat(settings.reward_per_ad ?? 0.01),
+      platform_cut_pct: parseFloat(settings.platform_cut_pct ?? 40),
+      max_ads_per_day: parseInt(settings.max_ads_per_day ?? 20, 10),
+      ad_cooldown_secs: parseInt(settings.ad_cooldown_secs ?? 30, 10),
+      referral_bonus: parseFloat(settings.referral_bonus ?? 0.005)
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch config' });
+  }
+});
+
 // Health check endpoint
 const healthHandler = (req, res) => {
   try {

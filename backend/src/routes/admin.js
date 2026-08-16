@@ -496,7 +496,7 @@ router.put('/settings', requireAdmin, (req, res) => {
       return res.status(400).json({ error: 'settings must be a non-empty array' });
     }
 
-    const allowed = ['reward_per_ad', 'platform_cut_pct', 'max_ads_per_day', 'max_ads_per_hour', 'min_withdrawal', 'ad_cooldown_secs'];
+    const allowed = ['reward_per_ad', 'platform_cut_pct', 'max_ads_per_day', 'max_ads_per_hour', 'min_withdrawal', 'ad_cooldown_secs', 'referral_bonus'];
     const updated = [];
 
     const upsert = db.prepare(`
@@ -514,6 +514,25 @@ router.put('/settings', requireAdmin, (req, res) => {
       }
     });
     tx();
+
+    // Sync updated settings to root config.json
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const configPath = path.join(__dirname, '../../../config.json');
+      const currentSettings = getSettings();
+      const configData = {
+        MIN_WITHDRAWAL: parseFloat(currentSettings.min_withdrawal ?? 0.5),
+        REWARD_PER_AD: parseFloat(currentSettings.reward_per_ad ?? 0.01),
+        PLATFORM_CUT_PCT: parseFloat(currentSettings.platform_cut_pct ?? 40),
+        MAX_ADS_PER_DAY: parseInt(currentSettings.max_ads_per_day ?? 20, 10),
+        AD_COOLDOWN_SECS: parseInt(currentSettings.ad_cooldown_secs ?? 30, 10),
+        REFERRAL_BONUS: parseFloat(currentSettings.referral_bonus ?? 0.005)
+      };
+      fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
+    } catch (syncErr) {
+      console.error('Failed to sync config.json:', syncErr);
+    }
 
     logAction(db, 'SETTINGS_CHANGED', { updated });
 

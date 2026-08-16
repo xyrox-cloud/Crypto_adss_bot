@@ -6,7 +6,7 @@ module.exports = {
   balanceError: () => `❌ Sorry, we couldn't fetch your balance right now. Please try again later.`,
   
 
-  withdrawInsufficient: () => `Your balance is below the minimum withdrawal amount of 0.5 TON. Keep completing tasks to earn more!`,
+  withdrawInsufficient: (minAmount = 0.5) => `Your balance is below the minimum withdrawal amount of ${Number(minAmount).toFixed(2)} TON. Keep completing tasks to earn more!`,
   
   withdrawApp: () => `Please open the Blitz Game Zone Mini App to process your withdrawal request.`,
   

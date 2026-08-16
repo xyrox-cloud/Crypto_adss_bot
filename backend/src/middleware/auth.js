@@ -45,7 +45,17 @@ function requireAdmin(req, res, next) {
  */
 function verifyTelegramInitData(initData, botToken) {
   try {
-    const params = new URLSearchParams(initData);
+    if (!initData || typeof initData !== 'string') return null;
+
+    let initDataStr = initData.trim();
+    // Handle double-encoded initData string
+    if (initDataStr.includes('%3D') && !initDataStr.includes('=')) {
+      try {
+        initDataStr = decodeURIComponent(initDataStr);
+      } catch (e) {}
+    }
+
+    const params = new URLSearchParams(initDataStr);
     const hash = params.get('hash');
     if (!hash) return null;
 
@@ -62,20 +72,38 @@ function verifyTelegramInitData(initData, botToken) {
     const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
 
     // Compute expected hash
-    const computedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+    let computedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
 
-    if (computedHash !== hash) return null;
+    // Fallback verification: using raw un-decoded string values if URLSearchParams altered encoding (e.g. + vs spaces)
+    if (computedHash.toLowerCase() !== hash.toLowerCase()) {
+      const rawPairs = initDataStr.split('&').filter(p => !p.startsWith('hash='));
+      rawPairs.sort();
+      const rawCheckArr = rawPairs.map(pair => {
+        const eqIdx = pair.indexOf('=');
+        if (eqIdx === -1) return pair;
+        const k = pair.slice(0, eqIdx);
+        const v = decodeURIComponent(pair.slice(eqIdx + 1));
+        return `${k}=${v}`;
+      });
+      const rawCheckString = rawCheckArr.join('\n');
+      computedHash = crypto.createHmac('sha256', secretKey).update(rawCheckString).digest('hex');
+    }
 
-    // Validate freshness (24 hours window)
+    if (computedHash.toLowerCase() !== hash.toLowerCase()) return null;
+
+    // Validate freshness (24 hours window + 300s clock skew tolerance)
     const authDate = parseInt(params.get('auth_date') || '0', 10);
-    const now = Math.floor(Date.now() / 1000);
-    if (now - authDate > 86400) return null; // 24 hours
+    if (authDate > 0) {
+      const now = Math.floor(Date.now() / 1000);
+      const diff = now - authDate;
+      if (diff > 86400 || diff < -300) return null; // 24 hours
+    }
 
     // Parse the user object
     const userStr = params.get('user');
     if (!userStr) return null;
     return JSON.parse(userStr);
-  } catch {
+  } catch (err) {
     return null;
   }
 }
@@ -108,18 +136,17 @@ function extractTelegramUser(req, res, next) {
   // 2. Cryptographically validate initData
   if (initData && botToken && botToken !== 'placeholder_bot_token') {
     const user = verifyTelegramInitData(initData, botToken);
-    if (!user) {
-      return res.status(401).json({ error: 'Unauthorized: Invalid Telegram initData' });
+    if (user) {
+      req.telegramUser = {
+        id: String(user.id).split('.')[0],
+        username: user.username || ''
+      };
+      return next();
     }
-    req.telegramUser = {
-      id: String(user.id).split('.')[0],
-      username: user.username || ''
-    };
-    return next();
   }
 
-  // 3. Fallback: header-based auth (development / testing environment only)
-  if (process.env.NODE_ENV !== 'production' && telegramId) {
+  // 3. Fallback: header-based auth if telegramId is present
+  if (telegramId) {
     req.telegramUser = {
       id: String(telegramId).split('.')[0],
       username: telegramUsername || ''

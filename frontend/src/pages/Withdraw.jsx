@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUser } from '../context/UserContext';
 import { useToast } from '../context/ToastContext';
-import { requestWithdrawal } from '../api/api';
+import { requestWithdrawal, getConfig } from '../api/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-import { MIN_WITHDRAWAL } from '../config';
+import { MIN_WITHDRAWAL as FALLBACK_MIN } from '../config';
 
 const Withdraw = () => {
   const { user, refreshUser } = useUser();
@@ -13,17 +13,31 @@ const Withdraw = () => {
   const [amount, setAmount]   = useState('');
   const [wallet, setWallet]   = useState('');
   const [loading, setLoading] = useState(false);
+  const [minWithdrawal, setMinWithdrawal] = useState(FALLBACK_MIN);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await getConfig();
+        if (res.data?.min_withdrawal) {
+          setMinWithdrawal(res.data.min_withdrawal);
+        }
+      } catch (e) {
+        // fallback
+      }
+    })();
+  }, []);
 
   const balance = Number(user?.balance || 0);
-  const canWithdraw = balance >= MIN_WITHDRAWAL;
-  const progress = Math.min(100, (balance / MIN_WITHDRAWAL) * 100);
+  const canWithdraw = balance >= minWithdrawal;
+  const progress = Math.min(100, (balance / minWithdrawal) * 100);
 
   const handleWithdraw = async (e) => {
     e.preventDefault();
     const wAmount = parseFloat(amount);
 
-    if (isNaN(wAmount) || wAmount < MIN_WITHDRAWAL) {
-      showToast(`Minimum withdrawal is ${MIN_WITHDRAWAL.toFixed(4)} TON`, 'error');
+    if (isNaN(wAmount) || wAmount < minWithdrawal) {
+      showToast(`Minimum withdrawal is ${minWithdrawal.toFixed(4)} TON`, 'error');
       return;
     }
     if (wAmount > balance) {
@@ -67,7 +81,7 @@ const Withdraw = () => {
           <div style={{ marginTop: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6, fontFamily: 'var(--font-mono)' }}>
               <span>Progress to minimum</span>
-              <span>{balance.toFixed(4)} / {MIN_WITHDRAWAL.toFixed(4)} TON</span>
+              <span>{balance.toFixed(4)} / {minWithdrawal.toFixed(4)} TON</span>
             </div>
             <div style={{ height: 5, borderRadius: 99, background: 'var(--border)', overflow: 'hidden' }}>
               <div style={{
@@ -80,7 +94,7 @@ const Withdraw = () => {
               }} />
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 6, textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
-              {(MIN_WITHDRAWAL - balance).toFixed(4)} more TON needed
+              {(minWithdrawal - balance).toFixed(4)} more TON needed
             </div>
           </div>
         )}
@@ -97,9 +111,9 @@ const Withdraw = () => {
               className="input-field mono"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder={`Min ${MIN_WITHDRAWAL.toFixed(4)}`}
+              placeholder={`Min ${minWithdrawal.toFixed(4)}`}
               step="0.0001"
-              min={MIN_WITHDRAWAL}
+              min={minWithdrawal}
               max={balance}
               required
               disabled={!canWithdraw || loading}
@@ -131,7 +145,7 @@ const Withdraw = () => {
               ? <><LoadingSpinner size={18} /> Processing…</>
               : canWithdraw
                 ? 'Request Withdrawal'
-                : `Minimum ${MIN_WITHDRAWAL.toFixed(4)} TON Required`}
+                : `Minimum ${minWithdrawal.toFixed(4)} TON Required`}
           </button>
         </form>
       </div>

@@ -1,5 +1,5 @@
 /* ───────────────────────────────────────────────────────
-   Admin Panel Styles — NovaGrid Admin
+   Admin Panel Styles — Blitz Game Zone Admin
    Dark charcoal-navy, matching main app design system
 ─────────────────────────────────────────────────────── */
 
@@ -871,3 +871,57 @@
 
   .admin-page { padding: 16px; }
 }
+
+/* ── Toggle / Slide Switch ───────────────────── */
+.toggle-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 42px;
+  height: 22px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.toggle-slider {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  transition: all 0.22s var(--ease);
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: var(--text-secondary);
+  border-radius: 50%;
+  transition: all 0.22s var(--ease);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: var(--error);
+  border-color: var(--error);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+  background-color: #ffffff;
+}
+
+.toggle-switch:hover .toggle-slider {
+  border-color: var(--accent);
+}
+

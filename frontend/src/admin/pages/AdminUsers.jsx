@@ -125,14 +125,24 @@ export default function AdminUsers() {
                   <td className="td-mono" style={{ textAlign: 'center' }}>{u.total_ads_watched ?? 0}</td>
                   <td className="td-mono" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{u.referral_count ?? 0}</td>
                   <td>
-                    <span className={`a-badge ${u.banned ? 'a-badge-banned' : 'a-badge-active'}`}>
-                      {u.banned ? 'Banned' : 'Active'}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <label className="toggle-switch" title={u.banned ? 'Click to unban user' : 'Click to ban user'}>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(u.banned)}
+                          onChange={() => setModal({ type: u.banned ? 'unban' : 'ban', user: u })}
+                        />
+                        <span className="toggle-slider"></span>
+                      </label>
+                      <span className={`a-badge ${u.banned ? 'a-badge-banned' : 'a-badge-active'}`}>
+                        {u.banned ? 'Banned' : 'Active'}
+                      </span>
+                    </div>
                   </td>
                   <td style={{ fontSize: 12, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>{fmtDate(u.created_at)}</td>
                   <td style={{ fontSize: 12, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>{fmtDate(u.last_seen)}</td>
                   <td>
-                    <div style={{ display: 'flex', gap: 6 }}>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                       <button
                         className="a-btn a-btn-ghost a-btn-sm"
                         onClick={() => setModal({ type: 'balance', user: u })}

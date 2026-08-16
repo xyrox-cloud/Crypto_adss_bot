@@ -19,6 +19,7 @@ export default function AdminApp() {
   const location = useLocation();
 
   useEffect(() => {
+    document.title = 'Blitz Game Zone — Admin Panel';
     const tgId = localStorage.getItem('tg_id');
     const isSuperAdmin = import.meta.env.VITE_SUPER_ADMIN_ID && tgId === import.meta.env.VITE_SUPER_ADMIN_ID;
     const token = getAdminToken();
@@ -73,7 +74,7 @@ export default function AdminApp() {
       <div className="admin-layout admin-root">
         <aside className="admin-sidebar">
           <div className="admin-sidebar-logo">
-            <div className="admin-logo-mark">BGZ</div>
+            <div className="admin-logo-mark" style={{ fontSize: 16 }}>Blitz Game Zone</div>
             <div className="admin-logo-sub">Admin Panel</div>
           </div>
           <nav className="admin-nav">

@@ -100,20 +100,46 @@ bot.command('balance', async (ctx) => {
 
 
 /**
+ * Helper function to fetch live platform config (min_withdrawal, etc.)
+ */
+let cachedConfig = null;
+let lastConfigFetch = 0;
+
+async function fetchPlatformConfig() {
+  const now = Date.now();
+  if (cachedConfig && (now - lastConfigFetch) < 30000) {
+    return cachedConfig;
+  }
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/config`);
+    if (res.ok) {
+      cachedConfig = await res.json();
+      lastConfigFetch = now;
+      return cachedConfig;
+    }
+  } catch (e) {
+    console.error('Error fetching platform config:', e);
+  }
+  return cachedConfig || { min_withdrawal: 0.50, reward_per_ad: 0.01 };
+}
+
+/**
  * Command: /withdraw
  * Checks balance and prompts user to withdraw via the app if they have enough balance.
  */
 bot.command('withdraw', async (ctx) => {
   const telegram_id = ctx.from.id;
   const balance = await fetchUserBalance(telegram_id);
+  const config = await fetchPlatformConfig();
+  const minWithdrawal = config.min_withdrawal || 0.50;
   
   if (balance === null) {
     await ctx.reply(messages.balanceError());
     return;
   }
   
-  if (balance < 0.5) {
-    await ctx.reply(messages.withdrawInsufficient(), {
+  if (balance < minWithdrawal) {
+    await ctx.reply(messages.withdrawInsufficient(minWithdrawal), {
       ...Markup.inlineKeyboard([
         [Markup.button.webApp('🚀 Open Blitz Game Zone', MINI_APP_URL)]
       ])

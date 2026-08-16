@@ -5,6 +5,23 @@ const rateLimit = require('express-rate-limit');
 const cron = require('node-cron');
 const router = express.Router();
 
+// ── GET /api/config (Public platform settings) ────────────────────────────────
+router.get('/config', (req, res) => {
+  try {
+    const settings = getSettings();
+    res.json({
+      min_withdrawal: parseFloat(settings.min_withdrawal ?? 0.5),
+      reward_per_ad: parseFloat(settings.reward_per_ad ?? 0.01),
+      platform_cut_pct: parseFloat(settings.platform_cut_pct ?? 40),
+      max_ads_per_day: parseInt(settings.max_ads_per_day ?? 20, 10),
+      ad_cooldown_secs: parseInt(settings.ad_cooldown_secs ?? 30, 10),
+      referral_bonus: parseFloat(settings.referral_bonus ?? 0.005)
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch config' });
+  }
+});
+
 router.post('/register', (req, res) => {
   try {
     let { telegram_id, username, first_name, photo_url, referral_code } = req.body;
