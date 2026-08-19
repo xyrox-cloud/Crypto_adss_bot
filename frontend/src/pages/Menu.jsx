@@ -156,14 +156,9 @@ const Menu = () => {
         {isSuperAdmin && (
           <div>
             <div className="bg-cardbg border border-secondary rounded-3xl overflow-hidden flex flex-col mt-2">
-              <button onClick={() => window.location.href = '/admin'} className="flex items-center p-3 hover:bg-white/5 transition-colors text-left text-secondary border-b border-cardborder">
+              <button onClick={() => window.location.href = '/admin'} className="flex items-center p-3 hover:bg-white/5 transition-colors text-left text-secondary">
                 <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center mr-3"><Settings size={16} /></div>
                 <div className="flex-1 font-bold text-sm">Admin Panel</div>
-                <ChevronRight size={18} />
-              </button>
-              <button onClick={() => window.location.href = '/superadmin'} className="flex items-center p-3 hover:bg-white/5 transition-colors text-left" style={{ color: '#FF5A1F' }}>
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center mr-3" style={{ background: 'rgba(255,90,31,0.1)' }}><Shield size={16} /></div>
-                <div className="flex-1 font-bold text-sm">Super Admin Console</div>
                 <ChevronRight size={18} />
               </button>
             </div>
