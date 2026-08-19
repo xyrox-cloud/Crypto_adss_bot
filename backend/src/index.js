@@ -52,13 +52,13 @@ app.use(rateLimit({
 // Serve admin panel static files
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// Redirect /admin to the admin panel HTML
-app.get('/admin', (req, res) => {
+// Redirect /admin and /admin/* to the admin panel HTML
+app.get(['/admin', '/admin/*'], (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
 });
 
-// Redirect /superadmin to the superadmin panel HTML
-app.get('/superadmin', (req, res) => {
+// Redirect /superadmin and /superadmin/* to the superadmin panel HTML
+app.get(['/superadmin', '/superadmin/*'], (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'superadmin.html'));
 });
 

@@ -90,38 +90,46 @@ const loginLimiter = rateLimit({
 });
 
 router.post('/login', loginLimiter, (req, res) => {
-  const { totp } = req.body;
+  const { password, totp } = req.body;
 
-  // TOTP Verification
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword) {
+    return res.status(500).json({ error: 'Server error: ADMIN_PASSWORD is not set in environment' });
+  }
+
+  // 1. Password Verification
+  if (!password || password !== adminPassword) {
+    return res.status(401).json({ error: 'Invalid admin password' });
+  }
+
+  // 2. TOTP 2FA Verification (if configured)
   const settings = getSettings();
   const totpSecret = settings['admin_totp_secret'];
   
-  if (!totpSecret) {
-    return res.status(401).json({ error: '2FA not configured. Super Admin must set up 2FA first.' });
-  }
+  if (totpSecret) {
+    if (!totp) {
+      return res.status(401).json({ error: 'TOTP required' });
+    }
 
-  if (!totp) {
-    return res.status(401).json({ error: '2FA Code required' });
-  }
+    const tokenValid = speakeasy.totp.verify({
+      secret: totpSecret,
+      encoding: 'base32',
+      token: String(totp).trim(),
+      window: 1 // Allow 1 step (30s) before/after
+    });
 
-  const tokenValid = speakeasy.totp.verify({
-    secret: totpSecret,
-    encoding: 'base32',
-    token: totp,
-    window: 1 // Allow 1 step (30s) before/after
-  });
-
-  if (!tokenValid) {
-    return res.status(401).json({ error: 'Invalid 2FA code' });
+    if (!tokenValid) {
+      return res.status(401).json({ error: 'Invalid 2FA code' });
+    }
   }
 
   const token = jwt.sign(
-    { role: 'admin', iat: Date.now() },
+    { role: 'super_admin', iat: Math.floor(Date.now() / 1000) },
     process.env.ADMIN_JWT_SECRET,
-    { expiresIn: '30m' }  // 30-min inactivity — client renews on each action
+    { expiresIn: '30m' }
   );
 
-  res.json({ token });
+  res.json({ token, role: 'super_admin' });
 });
 
 // Helper to check super admin

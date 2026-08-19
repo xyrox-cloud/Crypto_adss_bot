@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin - Blitz Game Zone (TON)</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -315,11 +316,17 @@
       <h1>Blitz Game Zone Admin</h1>
       <p>Revenue Sharing Platform Dashboard</p>
     </div>
-    <div>
-      <label for="admin-totp">2FA Code</label>
-      <input type="text" id="admin-totp" placeholder="6-digit code" />
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      <div>
+        <label for="admin-password">Admin Password</label>
+        <input type="password" id="admin-password" placeholder="Enter admin password" />
+      </div>
+      <div>
+        <label for="admin-totp">2FA Code (If enabled)</label>
+        <input type="text" id="admin-totp" placeholder="6-digit code" />
+      </div>
       <p id="login-error" class="error-msg hidden"></p>
-      <button class="btn btn-primary btn-full" onclick="doLogin()">🔐 Login</button>
+      <button class="btn btn-primary btn-full" style="width:100%; margin-top:8px;" onclick="doLogin()">🔐 Login</button>
     </div>
   </div>
 </div>
@@ -511,7 +518,10 @@
       resetInactivityTimer();
     }
     // Allow Enter key on login
-    document.getElementById('admin-totp').addEventListener('keydown', e => {
+    document.getElementById('admin-password')?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') doLogin();
+    });
+    document.getElementById('admin-totp')?.addEventListener('keydown', e => {
       if (e.key === 'Enter') doLogin();
     });
 
@@ -540,17 +550,22 @@
 
   /* ─── Auth ─── */
   async function doLogin() {
-    const totp = document.getElementById('admin-totp').value.trim();
+    const password = document.getElementById('admin-password')?.value || '';
+    const totp = document.getElementById('admin-totp')?.value.trim() || '';
     const errEl = document.getElementById('login-error');
     errEl.classList.add('hidden');
 
-    if (!totp) { errEl.textContent = '2FA Code is required'; errEl.classList.remove('hidden'); return; }
+    if (!password) {
+      errEl.textContent = 'Admin Password is required';
+      errEl.classList.remove('hidden');
+      return;
+    }
 
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ totp })
+        body: JSON.stringify({ password, totp })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -558,6 +573,7 @@
       }
       token = data.token;
       localStorage.setItem('admin_token', token);
+      localStorage.setItem('adshare_admin_token', token);
       showAdminApp();
       resetInactivityTimer();
     } catch (err) {

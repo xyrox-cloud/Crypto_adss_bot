@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Blitz Game Zone Super Admin</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -146,15 +147,20 @@
 </div>
 
 <script>
-  // Auth Headers
-  const initData = window.Telegram?.WebApp?.initData || localStorage.getItem('tg_init_data') || '';
-  const tgId = localStorage.getItem('tg_id');
-  
-  const headers = {
-    'Content-Type': 'application/json',
-    'x-telegram-init-data': initData,
-    'x-telegram-id': tgId
-  };
+  window.Telegram?.WebApp?.ready();
+  window.Telegram?.WebApp?.expand();
+
+  function getHeaders() {
+    const initData = window.Telegram?.WebApp?.initData || localStorage.getItem('tg_init_data') || '';
+    const tgId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || localStorage.getItem('tg_id') || '';
+    const token = localStorage.getItem('adshare_admin_token') || localStorage.getItem('admin_token') || '';
+
+    const h = { 'Content-Type': 'application/json' };
+    if (initData) h['x-telegram-init-data'] = initData;
+    if (tgId) h['x-telegram-id'] = String(tgId);
+    if (token) h['Authorization'] = `Bearer ${token}`;
+    return h;
+  }
 
   function showToast(msg, type = 'success') {
     const el = document.getElementById('toast');
@@ -173,6 +179,7 @@
   }
 
   async function api(path, options = {}) {
+    const headers = getHeaders();
     const res = await fetch(path, {
       ...options,
       headers: { ...headers, ...(options.headers || {}) }
@@ -189,11 +196,6 @@
 
   window.onload = async () => {
     try {
-      // Hit a super_admin only endpoint to verify identity
-      // Instead of creating a new one, we can just call setup-2fa or check a status endpoint.
-      // Wait, calling setup-2fa regenerates it! We should NOT call setup-2fa just to verify.
-      // I will create a /api/admin/me endpoint in the backend for identity verification.
-      
       const res = await api('/api/admin/superadmin-check');
       document.getElementById('loading').classList.add('hidden');
       document.getElementById('super-admin-content').classList.remove('hidden');
