@@ -2,10 +2,13 @@
   "name": "tg-adshare-bot",
   "version": "1.0.0",
   "description": "Telegram bot for Ad Revenue Sharing Mini App",
-  "main": "src/bot.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node src/bot.js",
-    "dev": "nodemon src/bot.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "telegraf": "^4.15.6",

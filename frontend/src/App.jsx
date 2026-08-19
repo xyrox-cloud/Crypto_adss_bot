@@ -72,7 +72,7 @@ function App() {
 
         // Initialize Monetag In-App Interstitial
         const zoneId = import.meta.env.VITE_MONETAG_ZONE_ID;
-        if (zoneId && !import.meta.env.DEV && !regRes.data?.is_admin) {
+        if (zoneId && !import.meta.env.DEV) {
           const inAppHandler = createAdHandler(zoneId);
           inAppHandler({
             type: 'inApp',

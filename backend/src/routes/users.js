@@ -76,14 +76,19 @@ router.post('/register', (req, res) => {
       
       const newId = tx();
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(newId);
-    } else {
-      // Update last_seen and other details if needed
-      db.prepare('UPDATE users SET username = ?, first_name = ?, photo_url = ?, last_seen = CURRENT_TIMESTAMP WHERE telegram_id = ?')
-        .run(username, first_name, photo_url || null, telegram_id);
+      // Ensure only SUPER_ADMIN_ID receives is_admin = 1
+      const superAdminId = process.env.SUPER_ADMIN_ID;
+      const isAdminUser = (superAdminId && String(telegram_id) === String(superAdminId)) ? 1 : 0;
+      
+      db.prepare('UPDATE users SET username = ?, first_name = ?, photo_url = ?, is_admin = ?, last_seen = CURRENT_TIMESTAMP WHERE telegram_id = ?')
+        .run(username, first_name, photo_url || null, isAdminUser, telegram_id);
       user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(telegram_id);
     }
 
-    res.json(user);
+    res.json({
+      ...user,
+      is_admin: (process.env.SUPER_ADMIN_ID && String(user.telegram_id) === String(process.env.SUPER_ADMIN_ID) && user.is_admin === 1) ? 1 : 0
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to register/fetch user' });
@@ -94,7 +99,7 @@ router.get('/me', extractTelegramUser, (req, res) => {
   try {
     const db = getDb();
     const user = db.prepare(`
-      SELECT balance, total_earned, referral_code, created_at, first_name, username,
+      SELECT balance, total_earned, referral_code, created_at, first_name, username, telegram_id,
              blitz_rounds, blitz_rounds_today, top_score, total_score_today, all_time_score,
              last_daily_claim, daily_streak, last_minigame_claim,
              quest_rounds_claimed, quest_score_claimed, quest_grinder_claimed, referral_count, is_admin
@@ -106,7 +111,14 @@ router.get('/me', extractTelegramUser, (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json(user);
+    const superAdminId = process.env.SUPER_ADMIN_ID;
+    const isStrictAdmin = (superAdminId && String(user.telegram_id) === String(superAdminId) && user.is_admin === 1) ? 1 : 0;
+
+    res.json({
+      ...user,
+      is_admin: isStrictAdmin
+    });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch user profile' });

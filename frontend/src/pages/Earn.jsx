@@ -58,51 +58,9 @@ const Earn = () => {
       return;
     }
 
-    if (user?.is_admin) {
-      showToast('Ads disabled for admin! Reward credited directly.', 'success');
-      setLoadingAd(true);
-      try {
-        const res = await claimAdReward();
-        if (res.data && res.data.success) {
-          const rewardAmt = res.data.reward || currentRewardPerAd;
-          setUser(prev => ({ 
-            ...prev, 
-            balance: (Number(prev.balance) || 0) + rewardAmt, 
-            total_earned: (Number(prev.total_earned) || 0) + rewardAmt 
-          }));
-          setStats(prev => ({
-            ...prev,
-            ads_today: prev.ads_today + 1,
-            ads_this_week: prev.ads_this_week + 1,
-            total_earned: (Number(prev.total_earned) || 0) + rewardAmt
-          }));
-          await refreshUser();
-        } else {
-          await refreshUser();
-          fetchStats();
-        }
-      } catch (err) {
-        console.error(err);
-        showToast('Error claiming reward', 'error');
-      } finally {
-        setLoadingAd(false);
-      }
-      return;
-    }
-
     setLoadingAd(true);
     try {
       const zoneId = import.meta.env.VITE_MONETAG_ZONE_ID;
-      
-      if (import.meta.env.DEV) {
-        await new Promise(r => setTimeout(r, 1200));
-        showToast('✅ Ad watched! Reward will be credited via webhook.', 'success');
-        await new Promise(r => setTimeout(r, 500));
-        await refreshUser();
-        fetchStats();
-        setLoadingAd(false);
-        return;
-      }
 
       if (!zoneId) {
         showToast('❌ Ad network configuration missing.', 'error');

@@ -11,3 +11,5 @@ backend/data/
 .DS_Store
 logs/
 backups/
+bots-backup/
+*.zip
