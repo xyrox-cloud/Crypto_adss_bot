@@ -99,12 +99,15 @@ const Earn = () => {
         fetchStats();
       }
     } catch (err) {
-      console.error(err);
+      console.error('Ad Watch Error:', err);
       const serverMsg = err?.response?.data?.error;
+      const errMsg = err?.message || '';
       if (serverMsg?.includes('limit')) {
         showToast(serverMsg, 'error');
+      } else if (errMsg.includes('communicating with the ad server') || errMsg.includes('blocked')) {
+        showToast('Ad server unreachable. Please disable AdBlock/VPN & retry.', 'error');
       } else {
-        showToast('Ad skipped or closed prematurely — no reward', 'info');
+        showToast('Ad not completed or no ads available right now.', 'info');
       }
     } finally {
       setLoadingAd(false);

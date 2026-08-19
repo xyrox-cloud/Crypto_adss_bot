@@ -76,28 +76,33 @@ const Home = () => {
       
       const res = await claimAdReward();
       if (res.data && res.data.success) {
+        const rewardAmt = res.data.reward || 0.001;
         setUser(prev => ({ 
           ...prev, 
-          balance: res.data.new_balance, 
-          total_earned: res.data.total_earned 
+          balance: (Number(prev?.balance) || 0) + rewardAmt, 
+          total_earned: (Number(prev?.total_earned) || 0) + rewardAmt 
         }));
         setStats(prev => ({
           ...prev,
-          ads_today: prev.ads_today + 1,
-          ads_this_week: prev.ads_this_week + 1,
-          total_earned: res.data.total_earned
+          ads_today: (prev?.ads_today || 0) + 1,
+          ads_this_week: (prev?.ads_this_week || 0) + 1,
+          total_earned: (Number(prev?.total_earned) || 0) + rewardAmt
         }));
+        await refreshUser();
       } else {
         await refreshUser();
         fetchStats();
       }
     } catch (err) {
-      console.error(err);
+      console.error('Ad Watch Error:', err);
       const serverMsg = err?.response?.data?.error;
+      const errMsg = err?.message || '';
       if (serverMsg?.includes('limit')) {
         showToast(serverMsg, 'error');
+      } else if (errMsg.includes('communicating with the ad server') || errMsg.includes('blocked')) {
+        showToast('Ad server unreachable. Please disable AdBlock/VPN & retry.', 'error');
       } else {
-        showToast('Ad skipped or closed prematurely — no reward', 'info');
+        showToast('Ad not completed or no ads available right now.', 'info');
       }
     } finally {
       setLoadingAd(false);
